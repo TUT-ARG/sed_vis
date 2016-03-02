@@ -17,7 +17,6 @@ comparison of the reference and estimated event lists.
     EventListVisualizer.show
 
 """
-
 import util.event_list
 import util.audio_player
 
