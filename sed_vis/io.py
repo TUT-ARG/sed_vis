@@ -16,7 +16,6 @@ import numpy
 import wave
 import csv
 import util.event_list
-import librosa
 
 
 def load_audio(filename, mono=True, fs=44100):
@@ -95,10 +94,11 @@ def load_audio(filename, mono=True, fs=44100):
 
         return audio_data, sample_rate
 
-    elif file_extension == '.flac':
-        audio_data, sample_rate = librosa.load(filename, sr=fs, mono=mono)
+    #elif file_extension == '.flac':
+        #import librosa
+        #audio_data, sample_rate = librosa.load(filename, sr=fs, mono=mono)
 
-        return audio_data, sample_rate
+        #return audio_data, sample_rate
 
     return None, None
 
