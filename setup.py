@@ -1,7 +1,7 @@
 from setuptools import setup
 
-with open('README.md') as file:
-    long_description = file.read()
+with open('README.md') as f:
+    long_description = f.read()
 
 setup(
     name='sed_vis',
@@ -9,7 +9,7 @@ setup(
     description='Visualization tools for sound event detection research.',
     author='Toni Heittola',
     author_email='toni.heittola@gmail.com',
-    url='',
+    url='https://github.com/TUT-ARG/sed_vis/',
     packages=['sed_vis'],
     long_description=long_description,
     classifiers=[
