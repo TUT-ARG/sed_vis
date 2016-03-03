@@ -750,8 +750,24 @@ pre {
 
 <p>from the source directory.</p>
 
+<p>To uninstall the toolbox:</p>
+
+<p><code>python setup.py install --record files.txt</code> to get files associated with toolbox</p>
+
+<p><code>cat files.txt | xargs rm -rf</code> to remove the files recorded by the previous step.</p>
+
+<p>You can also install the toolbox in develop mode:</p>
+
+<p><code>python setup.py develop</code></p>
+
+<p>Toolbox can be uninstalled:</p>
+
+<p><code>python setup.py develop --uninstall</code></p>
+
 <h2>
 <a id="user-content-requirements" class="anchor" href="#requirements" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Requirements</h2>
+
+<p>The toolbox is tested with Python 2.7.10. </p>
 
 <ul>
 <li>numpy &gt;= 1.7.0</li>
@@ -759,6 +775,10 @@ pre {
 <li>matplotlib &gt;= 1.4.0</li>
 <li>pyaudio &gt;= 0.2.7</li>
 </ul>
+
+<p><em>Mac</em></p>
+
+<p>In order to toolbox work with Mac, matplotlib need to use TkAgg backend. The toolbox will automatically try to set appropriate backend. </p>
 
 <h1>
 <a id="user-content-quickstart-using-the-visualizer" class="anchor" href="#quickstart-using-the-visualizer" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Quickstart: Using the visualizer</h1>
@@ -779,7 +799,7 @@ The visualizers scripts can be found in the <code>sed_vis</code> repository in t
 
 <p>To visualize reference and estimated annotations along with audio:</p>
 
-<p><code>./sed_visualizer.py -a ../tests/data/a001.flac -l ../tests/data/a001.ann ../tests/data/a001_system_output.ann -n reference system</code></p>
+<p><code>./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann ../tests/data/a001_system_output.ann -n reference system</code></p>
 
 <p>Where argument <code>-l ../tests/data/a001.ann ../tests/data/a001_system_output.ann</code> gives list of event lists to be visualized and argument <code>-n reference system</code> gives name identifiers for them.</p>
 
@@ -793,15 +813,15 @@ The visualizers scripts can be found in the <code>sed_vis</code> repository in t
 
 <p>To visualize only reference annotation along with audio:</p>
 
-<p><code>./sed_visualizer.py -a ../tests/data/a001.flac -l ../tests/data/a001.ann -n reference</code></p>
+<p><code>./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference</code></p>
 
 <p>To visualize only reference annotation along with audio using only time domain representations:</p>
 
-<p><code>./sed_visualizer.py -a ../tests/data/a001.flac -l ../tests/data/a001.ann -n reference --time_domain</code></p>
+<p><code>./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference --time_domain</code></p>
 
 <p>To visualize only reference annotation along with audio, and merging events having only small gap between them (&lt;100ms):</p>
 
-<p><code>./sed_visualizer.py -a ../tests/data/a001.flac -l ../tests/data/a001.ann -n reference --minimum_event_gap=0.1</code></p>
+<p><code>./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference --minimum_event_gap=0.1</code></p>
 
 <h1>
 <a id="user-content-quickstart-using-sed_vis-in-python-code" class="anchor" href="#quickstart-using-sed_vis-in-python-code" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Quickstart: Using <code>sed_vis</code> in Python code</h1>
@@ -811,7 +831,7 @@ The visualizers scripts can be found in the <code>sed_vis</code> repository in t
 <div class="highlight highlight-source-python"><pre><span class="pl-k">import</span> sed_vis
 
 <span class="pl-c"># Load audio signal first</span>
-audio, fs <span class="pl-k">=</span> sed_vis.io.load_audio(<span class="pl-s"><span class="pl-pds">'</span>tests/data/a001.flac<span class="pl-pds">'</span></span>)
+audio, fs <span class="pl-k">=</span> sed_vis.io.load_audio(<span class="pl-s"><span class="pl-pds">'</span>tests/data/a001.wav<span class="pl-pds">'</span></span>)
 
 <span class="pl-c"># Load event lists</span>
 reference_event_list <span class="pl-k">=</span> sed_vis.io.load_event_list(<span class="pl-s"><span class="pl-pds">'</span>tests/data/a001.ann<span class="pl-pds">'</span></span>)

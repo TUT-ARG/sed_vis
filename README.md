@@ -25,13 +25,34 @@ and then running
 
 from the source directory.
 
+To uninstall the toolbox:
+
+``python setup.py install --record files.txt`` to get files associated with toolbox
+
+``cat files.txt | xargs rm -rf`` to remove the files recorded by the previous step.
+
+
+You can also install the toolbox in develop mode:
+
+``python setup.py develop``
+
+Toolbox can be uninstalled:
+
+``python setup.py develop --uninstall``
+
 Requirements
 ------------
+
+The toolbox is tested with Python 2.7.10. 
 
 * numpy >= 1.7.0
 * scipy >= 0.9.0
 * matplotlib >= 1.4.0
 * pyaudio >= 0.2.7
+
+*Mac*
+
+In order to toolbox work with Mac, matplotlib need to use TkAgg backend. The toolbox will automatically try to set appropriate backend. 
 
 Quickstart: Using the visualizer
 ================================
@@ -52,7 +73,7 @@ To get usage help:
 
 To visualize reference and estimated annotations along with audio:
 
-``./sed_visualizer.py -a ../tests/data/a001.flac -l ../tests/data/a001.ann ../tests/data/a001_system_output.ann -n reference system``
+``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann ../tests/data/a001_system_output.ann -n reference system``
 
 Where argument ``-l ../tests/data/a001.ann ../tests/data/a001_system_output.ann`` gives list of event lists to be visualized and argument ``-n reference system`` gives name identifiers for them.
 
@@ -64,15 +85,15 @@ This will show window with three panels:
 
 To visualize only reference annotation along with audio:
 
-``./sed_visualizer.py -a ../tests/data/a001.flac -l ../tests/data/a001.ann -n reference``
+``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference``
 
 To visualize only reference annotation along with audio using only time domain representations:
 
-``./sed_visualizer.py -a ../tests/data/a001.flac -l ../tests/data/a001.ann -n reference --time_domain``
+``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference --time_domain``
 
 To visualize only reference annotation along with audio, and merging events having only small gap between them (<100ms):
 
-``./sed_visualizer.py -a ../tests/data/a001.flac -l ../tests/data/a001.ann -n reference --minimum_event_gap=0.1``
+``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference --minimum_event_gap=0.1``
 
 Quickstart: Using ``sed_vis`` in Python code
 =============================================
@@ -83,7 +104,7 @@ After ``sed_vis`` is installed, it can be imported and used to your Python code 
 import sed_vis
 
 # Load audio signal first
-audio, fs = sed_vis.io.load_audio('tests/data/a001.flac')
+audio, fs = sed_vis.io.load_audio('tests/data/a001.wav')
 
 # Load event lists
 reference_event_list = sed_vis.io.load_event_list('tests/data/a001.ann')
