@@ -15,6 +15,8 @@ import os
 import numpy
 import wave
 import csv
+import subprocess
+import scipy.signal
 import util.event_list
 
 
@@ -80,8 +82,8 @@ def load_audio(filename, mono=True, fs=44100):
             a = numpy.fromstring(data, dtype='<%s%d' % (dt_char, sample_width))
             audio_data = a.reshape(-1, number_of_channels).T
 
+        # Down-mix audio
         if mono:
-            # Down-mix audio
             audio_data = numpy.mean(audio_data, axis=0)
 
         # Convert int values into float
@@ -89,18 +91,38 @@ def load_audio(filename, mono=True, fs=44100):
 
         # Resample
         if fs != sample_rate:
-            audio_data = librosa.core.resample(audio_data, sample_rate, fs)
-            sample_rate = fs
+            n_samples = int(numpy.ceil(audio_data.shape[-1] * float(fs) / sample_rate))
+            audio_data = scipy.signal.resample(audio_data, n_samples, axis=-1)
+            audio_data = numpy.ascontiguousarray(audio_data, dtype=audio_data.dtype)
 
-        return audio_data, sample_rate
+    else:
+        command = ['ffmpeg',
+                   '-v', 'quiet',
+                   '-i', '-',  # audio_filename,
+                   '-f', 'f32le',
+                   '-ar', str(fs),  # output will have fs
+                   '-ac', '1',  # stereo (set to '1' for mono)
+                   '-']
+        audio_data = numpy.empty(0)
+        with open(filename, "rb") as afilename:
+            pipe = subprocess.Popen(command, stdin=afilename,
+                                    stdout=subprocess.PIPE, bufsize=10 ** 8)
+            while True:
+                raw_audio = pipe.stdout.read(88200 * 4)
+                if len(raw_audio) == 0:
+                    break
 
-    #elif file_extension == '.flac':
-        #import librosa
-        #audio_data, sample_rate = librosa.load(filename, sr=fs, mono=mono)
+                audio_array = numpy.fromstring(raw_audio, dtype="float32")
+                audio_data = numpy.hstack((audio_data, audio_array))
 
-        #return audio_data, sample_rate
+        pipe = subprocess.Popen(['ffmpeg', '-i', filename, '-'],
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        pipe.stdout.readline()
+        pipe.terminate()
+        infos = pipe.stderr.read()
 
-    return None, None
+    return audio_data, fs
 
 
 def load_event_list(filename):
