@@ -54,6 +54,7 @@ class EventListVisualizer(object):
     >>> vis.show()
 
     """
+
     def __init__(self,
                  event_lists=None,
                  audio_signal=None,
@@ -124,7 +125,9 @@ class EventListVisualizer(object):
                                                                      minimum_event_gap=minimum_event_gap)
 
         if audio_signal is not None and sampling_rate is not None:
+            audio_signal = audio_signal / numpy.max(numpy.abs(audio_signal))
             self.audio = util.audio_player.AudioPlayer(signal=audio_signal, sampling_rate=sampling_rate)
+
         if mode is not 'spectrogram' and mode is not 'time_domain':
             mode = 'spectrogram'
         self.mode = mode
