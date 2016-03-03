@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Top-level module for casa_vis"""
+"""Top-level module for sed_vis"""
 
 # Import all submodules
 from . import util

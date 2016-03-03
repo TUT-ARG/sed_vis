@@ -17,7 +17,7 @@ Audio player
 
 import numpy
 import threading
-
+from numpy.lib.stride_tricks import as_strided
 
 class AudioPlayer(object):
     def __init__(self, signal, sampling_rate):
@@ -192,8 +192,19 @@ class AudioThread(threading.Thread):
         self.sampling_rate = sampling_rate
 
         # Split audio into chunks already before playback
-        import librosa
-        self.chunks = librosa.util.frame(self.audio, frame_length=self.chunk_size, hop_length=self.chunk_size)
+        if self.chunk_size < 1:
+            raise ParameterError('Invalid chunk size: {:d}'.format(self.chunk_size))
+
+        # Compute the number of frames, end may be truncated.
+        n_frames = 1 + int((len(self.audio) - self.chunk_size) / self.chunk_size)
+
+        if n_frames < 1:
+            raise ParameterError('Buffer is too short')
+
+        # Vertical stride is one sample
+        # Horizontal stride is `hop_length` samples
+        self.chunks = as_strided(self.audio, shape=(self.chunk_size, n_frames),
+                                 strides=(self.audio.itemsize, self.chunk_size * self.audio.itemsize))
 
         # Lockers
         self.lock = threading.Lock()  # Avoid control methods simultaneous call
