@@ -434,21 +434,21 @@ class EventListVisualizer(object):
                                                                       self.__event_roll_panel_play_indicator_update,
                                                                       init_func=self.__event_roll_panel_play_indicator_init,
                                                                       interval=10,
-                                                                      blit=False,
+                                                                      blit=True,
                                                                       repeat=False)
 
             self.animation_selector_panel = animation.FuncAnimation(self.fig,
                                                                     self.__selector_panel_play_indicator_update,
                                                                     init_func=self.__selector_panel_play_indicator_init,
                                                                     interval=10,
-                                                                    blit=False,
+                                                                    blit=True,
                                                                     repeat=False)
 
             self.animation_highlight_panel = animation.FuncAnimation(self.fig,
                                                                      self.__highlight_panel_play_indicator_update,
                                                                      init_func=self.__highlight_panel_play_indicator_init,
                                                                      interval=10,
-                                                                     blit=False,
+                                                                     blit=True,
                                                                      repeat=False)
             self.fig.canvas.draw()
 
