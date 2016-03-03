@@ -23,7 +23,7 @@ import util.event_list
 def load_audio(filename, mono=True, fs=44100):
     """Load audio file into numpy array
 
-    Supports 24-bit wav-format, and flac audio through librosa.
+    Supports 24-bit wav-format, other audio formats are supported through FFMPEG.
 
     Parameters
     ----------
