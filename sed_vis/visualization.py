@@ -27,6 +27,11 @@ import time
 import scipy.fftpack
 import scipy.signal
 from numpy.lib.stride_tricks import as_strided
+from sys import platform as _platform
+import matplotlib
+if _platform == "darwin":
+    # MAC OS X
+    matplotlib.use('TkAgg')
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
