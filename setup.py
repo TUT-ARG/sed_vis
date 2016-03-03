@@ -19,7 +19,6 @@ setup(
         "Intended Audience :: Developers",
         "Topic :: Multimedia :: Sound/Audio :: Analysis",
         "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3",
     ],
     keywords=['audio analysis', 'sound event detection', 'dsp'],
     license='MIT',

@@ -30,9 +30,8 @@ Requirements
 
 * numpy >= 1.7.0
 * scipy >= 0.9.0
-* matplotlib >= 1.4.3
-* librosa >= 0.4.0
-* pyaudio >= 0.2.8
+* matplotlib >= 1.4.0
+* pyaudio >= 0.2.7
 
 Quickstart: Using the visualizer
 ================================
