@@ -354,17 +354,18 @@ class EventListVisualizer(object):
         # Buttons
         # ====================================
         ax_play = plt.axes([0.125, 0.93, 0.07, 0.04])
-        ax_pause = plt.axes([0.205, 0.93, 0.07, 0.04])
-        ax_stop = plt.axes([0.285, 0.93, 0.07, 0.04])
+        #ax_pause = plt.axes([0.205, 0.93, 0.07, 0.04])
+        ax_stop = plt.axes([0.205, 0.93, 0.07, 0.04])
+        #ax_stop = plt.axes([0.285, 0.93, 0.07, 0.04])
         ax_close = plt.axes([0.92, 0.93, 0.07, 0.04])
 
         self.button_play = Button(ax_play,  'Play', color=self.button_color['off'], hovercolor=self.button_color['on'])
-        self.button_pause = Button(ax_pause, 'Pause', color=self.button_color['off'], hovercolor=self.button_color['on'])
+        #self.button_pause = Button(ax_pause, 'Pause', color=self.button_color['off'], hovercolor=self.button_color['on'])
         self.button_stop = Button(ax_stop,  'Stop', color=self.button_color['off'], hovercolor=self.button_color['on'])
         self.button_close = Button(ax_close, 'Close', color=self.button_color['off'], hovercolor=self.button_color['on'])
 
         self.button_play.on_clicked(self.__on_play)
-        self.button_pause.on_clicked(self.__on_pause)
+        #self.button_pause.on_clicked(self.__on_pause)
         self.button_stop.on_clicked(self.__on_stop)
         self.button_close.on_clicked(self.__on_close_window)
 
@@ -493,12 +494,48 @@ class EventListVisualizer(object):
         self.fig.canvas.draw()
 
     def __on_play(self, event):
+        if self.audio.playing:
+            self.audio.stop()  # Stop current playback
+            try:
+                self.event_panel_indicator_line.set_visible(False)
+                self.event_panel_indicator_line.remove()
+            except:
+                pass
+
+            if self.animation_event_roll_panel is not None:
+                self.animation_event_roll_panel._stop()
+                self.animation_event_roll_panel = None
+
+            try:
+                self.selector_panel_indicator_line.set_visible(False)
+                self.selector_panel_indicator_line.remove()
+            except:
+                pass
+
+            if self.animation_selector_panel is not None:
+                self.animation_selector_panel._stop()
+                self.animation_selector_panel = None
+
+            try:
+                self.highlight_panel_indicator_line.set_visible(False)
+                self.highlight_panel_indicator_line.remove()
+            except:
+                pass
+
+            if self.animation_highlight_panel is not None:
+                self.animation_highlight_panel._stop()
+                self.animation_highlight_panel = None
+
+            self.fig.canvas.draw()
+
+            time.sleep(0.25)  # Wait until playback has stopped
+
         self.audio.play(offset=self.begin_time, duration=self.end_time-self.begin_time)
         self.button_play.color = self.button_color['on']
         self.button_play.hovercolor = self.button_color['on']
 
-        self.button_pause.color = self.button_color['off']
-        self.button_pause.hovercolor = self.button_color['off']
+        #self.button_pause.color = self.button_color['off']
+        #self.button_pause.hovercolor = self.button_color['off']
 
         self.button_stop.color = self.button_color['off']
         self.button_stop.hovercolor = self.button_color['off']
@@ -615,8 +652,8 @@ class EventListVisualizer(object):
         self.button_play.color = self.button_color['off']
         self.button_play.hovercolor = self.button_color['off']
 
-        self.button_pause.color = self.button_color['on']
-        self.button_pause.hovercolor = self.button_color['on']
+        #self.button_pause.color = self.button_color['on']
+        #self.button_pause.hovercolor = self.button_color['on']
 
         self.button_stop.color = self.button_color['off']
         self.button_stop.hovercolor = self.button_color['off']
@@ -629,8 +666,8 @@ class EventListVisualizer(object):
         self.button_play.color = self.button_color['off']
         self.button_play.hovercolor = self.button_color['off']
 
-        self.button_pause.color = self.button_color['off']
-        self.button_pause.hovercolor = self.button_color['off']
+        #self.button_pause.color = self.button_color['off']
+        #self.button_pause.hovercolor = self.button_color['off']
 
         self.button_stop.color = self.button_color['off']
         self.button_stop.hovercolor = self.button_color['off']
