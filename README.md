@@ -15,15 +15,22 @@ The visualization tool can be used in any of the following ways:
 Installation instructions
 =========================
 
-You can install ``sed_vis`` from source by first installing the dependencies
+Easiest way to install is to use ``pip``:
+
+    git clone https://github.com/TUT-ARG/sed_vis.git
+    pip install -e sed_vis
+
+To uninstall:
+
+    pip uninstall sed_vis
+
+To install from source using ``setup.py``, first install the dependencies:
 
 ``pip install -r requirements.txt``
 
-and then running
+and then run:
 
 ``python setup.py install``
-
-from the source directory.
 
 To uninstall the toolbox:
 
