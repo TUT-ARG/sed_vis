@@ -70,7 +70,8 @@ class EventListVisualizer(object):
                  spec_fft_size=1024,
                  minimum_event_length=None,
                  minimum_event_gap=None,
-                 color='#339933'):
+                 color='#339933',
+                 use_blit=False):
         """Constructor
 
         Parameters
@@ -176,6 +177,8 @@ class EventListVisualizer(object):
         self.button_pause = None
         self.button_stop = None
         self.button_close = None
+
+        self.use_blit = use_blit
 
     def show(self):
         """Shows the visualizer.
@@ -374,7 +377,7 @@ class EventListVisualizer(object):
                                         minspan=None,
                                         direction='horizontal',
                                         span_stays=True,
-                                        useblit=True,
+                                        useblit=self.use_blit,
                                         onmove_callback=None,
                                         rectprops=dict(alpha=0.15, facecolor=self.color))
 
@@ -435,21 +438,21 @@ class EventListVisualizer(object):
                                                                       self.__event_roll_panel_play_indicator_update,
                                                                       init_func=self.__event_roll_panel_play_indicator_init,
                                                                       interval=10,
-                                                                      blit=True,
+                                                                      blit=self.use_blit,
                                                                       repeat=False)
 
             self.animation_selector_panel = animation.FuncAnimation(self.fig,
                                                                     self.__selector_panel_play_indicator_update,
                                                                     init_func=self.__selector_panel_play_indicator_init,
                                                                     interval=10,
-                                                                    blit=True,
+                                                                    blit=self.use_blit,
                                                                     repeat=False)
 
             self.animation_highlight_panel = animation.FuncAnimation(self.fig,
                                                                      self.__highlight_panel_play_indicator_update,
                                                                      init_func=self.__highlight_panel_play_indicator_init,
                                                                      interval=10,
-                                                                     blit=True,
+                                                                     blit=self.use_blit,
                                                                      repeat=False)
             self.fig.canvas.draw()
 
@@ -541,25 +544,26 @@ class EventListVisualizer(object):
         self.button_stop.hovercolor = self.button_color['off']
 
         self.playback_offset = self.begin_time
+
         self.animation_event_roll_panel = animation.FuncAnimation(self.fig,
                                                                   self.__event_roll_panel_play_indicator_update,
                                                                   init_func=self.__event_roll_panel_play_indicator_init,
-                                                                  interval=10,
-                                                                  blit=True,
+                                                                  interval=50,
+                                                                  blit=self.use_blit,
                                                                   repeat=False)
 
         self.animation_selector_panel = animation.FuncAnimation(self.fig,
                                                                 self.__selector_panel_play_indicator_update,
                                                                 init_func=self.__selector_panel_play_indicator_init,
-                                                                interval=10,
-                                                                blit=True,
+                                                                interval=50,
+                                                                blit=self.use_blit,
                                                                 repeat=False)
 
         self.animation_highlight_panel = animation.FuncAnimation(self.fig,
                                                                  self.__highlight_panel_play_indicator_update,
                                                                  init_func=self.__highlight_panel_play_indicator_init,
-                                                                 interval=10,
-                                                                 blit=True,
+                                                                 interval=50,
+                                                                 blit=self.use_blit,
                                                                  repeat=False)
         self.fig.canvas.draw()
 
