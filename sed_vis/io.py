@@ -243,6 +243,7 @@ def load_event_list(filename):
 
     return util.event_list.EventList(data)
 
+
 def isfloat(value):
   try:
     float(value)
