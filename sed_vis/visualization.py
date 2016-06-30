@@ -68,6 +68,8 @@ class EventListVisualizer(object):
                  spec_hop_size=256,
                  spec_win_size=1024,
                  spec_fft_size=1024,
+                 spec_cmap='spectral',
+                 spec_interpolation='nearest',
                  minimum_event_length=None,
                  minimum_event_gap=None,
                  color='#339933',
@@ -101,6 +103,13 @@ class EventListVisualizer(object):
             FFT length
             (Default value=1024)
 
+        spec_cmap : str
+            Color map used for spectrogram, see examples: http://matplotlib.org/examples/color/colormaps_reference.html
+            (Default value='spectral')
+        spec_interpolation : str
+            Matrix interpolation method for spectrogram (e.g. nearest, bilear, bicubic, quadric, gaussian)
+            (Default value='nearest')
+
         minimum_event_length : float > 0.0
             Minimum event length in seconds, shorten than given are filtered out from the output.
             (Default value=None)
@@ -123,7 +132,7 @@ class EventListVisualizer(object):
         events = util.event_list.EventList()
         for event_list_label in self._event_lists:
             events += self._event_lists[event_list_label]
-        self.event_labels = events.unique_event_labels
+        self.event_labels = sorted(events.unique_event_labels, reverse=True)
         self.event_label_count = len(self.event_labels)
 
         for name in self._event_lists:
@@ -141,6 +150,9 @@ class EventListVisualizer(object):
         self.spec_hop_size = spec_hop_size
         self.spec_win_size = spec_win_size
         self.spec_fft_size = spec_fft_size
+        self.spec_cmap = spec_cmap
+        self.spec_interpolation = spec_interpolation
+
         self.color = color
         self.button_color = {'off': 'grey', 'on': 'red'}
         self.indicator_line_color = color
@@ -235,7 +247,7 @@ class EventListVisualizer(object):
                                             win_length=self.spec_win_size,
                                             hop_length=self.spec_hop_size)
 
-            self.__plot_spectrogram(self.D, sampling_rate=self.audio.fs)
+            self.__plot_spectrogram(self.D, sampling_rate=self.audio.fs, interpolation=self.spec_interpolation, cmap=self.spec_cmap)
 
             self.ax2.yaxis.grid(False, which='major')
             self.ax2.yaxis.grid(False, which='minor')
@@ -289,6 +301,7 @@ class EventListVisualizer(object):
         y = 0
         line_margin = 0.1
         annotation_height = (1.0-line_margin*2)/event_list_count
+
         for label in self.event_labels:
             for event_list_id, event_list_label in enumerate(self._event_lists):
                 offset = event_list_id * annotation_height
@@ -733,9 +746,9 @@ class EventListVisualizer(object):
         return log_spec
 
     @staticmethod
-    def __plot_spectrogram(data, sampling_rate=44100, n_yticks=5):
+    def __plot_spectrogram(data, sampling_rate=44100, n_yticks=5, interpolation='nearest', cmap='spectral'):
 
-        axes = plt.imshow(data, aspect='auto', origin='lower', interpolation='nearest', cmap=plt.get_cmap('spectral'))
+        axes = plt.imshow(data, aspect='auto', origin='lower', interpolation=interpolation, cmap=plt.get_cmap(cmap))
 
         # X axis
         plt.xticks([])
