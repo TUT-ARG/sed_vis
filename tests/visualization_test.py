@@ -11,6 +11,7 @@ if mode == 'publication':
     vis = sed_vis.visualization.EventListVisualizer(event_lists={'reference': sed_vis.io.load_event_list(os.path.join(current_path,'data/a001.ann')),
                                                                  'full': sed_vis.io.load_event_list(os.path.join(current_path,'data/a001_full.ann')),
                                                                  'estimated': sed_vis.io.load_event_list(os.path.join(current_path,'data/a001_system_output.ann'))},
+                                                    event_list_order=['reference', 'full', 'estimated'],
                                                     audio_signal=audio,
                                                     sampling_rate=fs,
                                                     spec_cmap='jet',
