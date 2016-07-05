@@ -94,6 +94,10 @@ To visualize only reference annotation along with audio:
 
 ``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference``
 
+To visualize only reference annotation along with audio, with only certain sound event labels visible:
+
+``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference -e "bird singing" "car passing by"``
+
 To visualize only reference annotation along with audio using only time domain representations:
 
 ``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference --time_domain``
@@ -101,6 +105,10 @@ To visualize only reference annotation along with audio using only time domain r
 To visualize only reference annotation along with audio, and merging events having only small gap between them (<100ms):
 
 ``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference --minimum_event_gap=0.1``
+
+To prepare visuals for publication. This will remove all audio playback buttons and tighten the layout. Also font size is increased. Use figure save button to save figure in svg format. One can use Inkscape to edit figure further and save into eps-format.
+
+``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference --publication``
 
 Quickstart: Using ``sed_vis`` in Python code
 =============================================
