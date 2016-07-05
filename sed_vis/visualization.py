@@ -62,6 +62,7 @@ class EventListVisualizer(object):
 
     def __init__(self,
                  event_lists=None,
+                 event_list_order=None,
                  audio_signal=None,
                  sampling_rate=None,
                  mode='spectrogram',
@@ -128,6 +129,7 @@ class EventListVisualizer(object):
         """
 
         self._event_lists = event_lists
+        self._event_list_order = event_list_order
 
         events = util.event_list.EventList()
         for event_list_label in self._event_lists:
@@ -303,7 +305,8 @@ class EventListVisualizer(object):
         annotation_height = (1.0-line_margin*2)/event_list_count
 
         for label in self.event_labels:
-            for event_list_id, event_list_label in enumerate(self._event_lists):
+            for event_list_id, event_list_label in enumerate(self._event_list_order):
+                #for event_list_id, event_list_label in enumerate(self._event_lists):
                 offset = event_list_id * annotation_height
 
                 event_y = y - 0.5 + line_margin + offset
@@ -353,7 +356,8 @@ class EventListVisualizer(object):
         self.ax3.set_xlim(self.begin_time, self.end_time)
         if event_list_count > 1:
             span = 0
-            for event_list_id, event_list_label in enumerate(self._event_lists):
+            for event_list_id, event_list_label in enumerate(self._event_list_order):
+                #for event_list_id, event_list_label in enumerate(self._event_lists):
 
                 ax_legend_color = plt.axes([0.125+span, 0.02, 0.02, 0.02])
                 Button(ax_legend_color, '', color=m.to_rgba(event_list_id), hovercolor=m.to_rgba(event_list_id))
