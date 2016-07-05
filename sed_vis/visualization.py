@@ -63,6 +63,7 @@ class EventListVisualizer(object):
     def __init__(self,
                  event_lists=None,
                  event_list_order=None,
+                 active_events=None,
                  audio_signal=None,
                  sampling_rate=None,
                  mode='spectrogram',
@@ -74,13 +75,22 @@ class EventListVisualizer(object):
                  minimum_event_length=None,
                  minimum_event_gap=None,
                  color='#339933',
-                 use_blit=False):
+                 use_blit=False,
+                 publication_mode=False):
         """Constructor
 
         Parameters
         ----------
         event_lists : dict of event lists
             Dict of event lists
+
+        event_list_order : list
+            Order of event list, if None alphabetical order used
+            (Default value=None)
+
+        active_events : list
+            List of active sound event classes, if None all used.
+            (Default value=None)
 
         audio_signal : np.ndarray
             Audio signal
@@ -122,6 +132,14 @@ class EventListVisualizer(object):
         color : color hex
             Main color code used in highlighting things
 
+        use_blit : bool
+            Use blit
+            (Default value=False)
+
+        publication_mode : bool
+            Strip visual elements, can be used to prepare figures for publications.
+            (Default value=False)
+
         Returns
         -------
         Nothing
@@ -129,13 +147,20 @@ class EventListVisualizer(object):
         """
 
         self._event_lists = event_lists
-        self._event_list_order = event_list_order
+        if event_list_order is None:
+            self._event_list_order = sorted(self._event_lists.keys())
+        else:
+            self._event_list_order = event_list_order
 
         events = util.event_list.EventList()
         for event_list_label in self._event_lists:
             events += self._event_lists[event_list_label]
         self.event_labels = sorted(events.unique_event_labels, reverse=True)
         self.event_label_count = len(self.event_labels)
+        if active_events is None:
+            self.active_events = self.event_labels
+        else:
+            self.active_events = sorted(active_events)
 
         for name in self._event_lists:
             self._event_lists[name] = self._event_lists[name].filter(minimum_event_length=minimum_event_length,
@@ -194,6 +219,19 @@ class EventListVisualizer(object):
 
         self.use_blit = use_blit
 
+        self.publication_mode = publication_mode
+
+        self.panel_title_font_size = 14
+        self.legend_font_size = 12
+        self.event_roll_label_font_size = 14
+
+        if self.publication_mode:
+            self.panel_title_font_size = 16
+            self.legend_font_size = 16
+
+            self.spec_cmap = 'jet'
+            self.spec_interpolation = 'bicubic'
+
     def show(self):
         """Shows the visualizer.
 
@@ -233,7 +271,7 @@ class EventListVisualizer(object):
         self.ax1.xaxis.grid(True, which='minor')
         self.ax1.yaxis.set_label_position("right")
 
-        plt.title('Selection', fontsize=14)
+        plt.title('Selection', fontsize=self.panel_title_font_size)
 
         # Highlight panel
         # ====================================
@@ -255,7 +293,7 @@ class EventListVisualizer(object):
             self.ax2.yaxis.grid(False, which='minor')
             self.ax2.xaxis.grid(False, which='major')
             self.ax2.xaxis.grid(False, which='minor')
-            plt.ylabel('Spectrogram', fontsize=14)
+            plt.ylabel('Spectrogram', fontsize=self.panel_title_font_size)
 
         elif self.mode == 'time_domain':
 
@@ -277,7 +315,7 @@ class EventListVisualizer(object):
 
             self.ax2.xaxis.grid(True, which='major')
             self.ax2.xaxis.grid(True, which='minor')
-            plt.ylabel('Waveform', fontsize=14)
+            plt.ylabel('Waveform', fontsize=self.panel_title_font_size)
 
         self.ax2.yaxis.set_label_position("right")
 
@@ -300,23 +338,24 @@ class EventListVisualizer(object):
 
         m = cm.ScalarMappable(norm=norm, cmap=color_map)
 
-        y = 0
         line_margin = 0.1
+        y = 0
         annotation_height = (1.0-line_margin*2)/event_list_count
 
-        for label in self.event_labels:
+        for label in self.active_events:
             for event_list_id, event_list_label in enumerate(self._event_list_order):
-                #for event_list_id, event_list_label in enumerate(self._event_lists):
-                offset = event_list_id * annotation_height
+                offset = (len(self._event_list_order)-1-event_list_id) * annotation_height
 
                 event_y = y - 0.5 + line_margin + offset
+
+                # grid line
                 line = plt.Rectangle((0, y-0.5),
                                      height=0.001,
                                      width=self.end_time,
                                      edgecolor=m.to_rgba(0),
                                      facecolor=m.to_rgba(0))
                 plt.gca().add_patch(line)
-
+                #print label, event_list_id, event_list_label, y, event_y
                 for event in self._event_lists[event_list_label]:
                     if event['event_label'] == label:
                         event_length = event['event_offset'] - event['event_onset']
@@ -333,9 +372,15 @@ class EventListVisualizer(object):
                                                   picker=5)
                         plt.gca().add_patch(rectangle)
             y += 1
-
+        # grid line
+        line = plt.Rectangle((0, y - 0.5),
+                             height=0.001,
+                             width=self.end_time,
+                             edgecolor=m.to_rgba(0),
+                             facecolor=m.to_rgba(0))
+        plt.gca().add_patch(line)
         # Axis
-        plt.axis([0, self.audio.duration_seconds, -0.5, self.event_label_count + 0.5])
+        plt.axis([0, self.audio.duration_seconds, -0.5, len(self.active_events) + 0.5])
         locs = numpy.arange(0, self.audio.duration_seconds, 0.00001)
 
         plt.xlim([locs[0], locs[-1]])
@@ -346,8 +391,8 @@ class EventListVisualizer(object):
         self.ax3.xaxis.grid(True, which='minor')
 
         # Y axis
-        plt.yticks(numpy.arange(self.event_label_count), self.event_labels, fontsize=12)
-        plt.ylabel('Event Roll', fontsize=14)
+        plt.yticks(numpy.arange(len(self.active_events)), self.active_events, fontsize=self.event_roll_label_font_size)
+        plt.ylabel('Event Roll', fontsize=self.panel_title_font_size)
         self.ax3.yaxis.set_label_position('right')
         self.ax3.yaxis.grid(False, which='major')
         self.ax3.yaxis.grid(False, which='minor')
@@ -359,35 +404,13 @@ class EventListVisualizer(object):
             for event_list_id, event_list_label in enumerate(self._event_list_order):
                 #for event_list_id, event_list_label in enumerate(self._event_lists):
 
-                ax_legend_color = plt.axes([0.125+span, 0.02, 0.02, 0.02])
+                ax_legend_color = plt.axes([0.225+span, 0.02, 0.02, 0.02])
                 Button(ax_legend_color, '', color=m.to_rgba(event_list_id), hovercolor=m.to_rgba(event_list_id))
 
-                ax_legend_label = plt.axes([0.125+0.025+span, 0.02, 0.10, 0.04])
+                ax_legend_label = plt.axes([0.225+0.025+span, 0.02, 0.10, 0.04])
                 ax_legend_label.axis('off')
-                ax_legend_label.text(0, 0, event_list_label)
+                ax_legend_label.text(0, 0, event_list_label, fontsize=self.legend_font_size)
                 span += 0.15
-
-        ax_legend_label = plt.axes([0.92, 0.02, 0.10, 0.04])
-        ax_legend_label.axis('off')
-        ax_legend_label.text(0, 0, 'sed_vis', fontsize=16)
-
-        # Buttons
-        # ====================================
-        ax_play = plt.axes([0.125, 0.93, 0.07, 0.04])
-        #ax_pause = plt.axes([0.205, 0.93, 0.07, 0.04])
-        ax_stop = plt.axes([0.205, 0.93, 0.07, 0.04])
-        #ax_stop = plt.axes([0.285, 0.93, 0.07, 0.04])
-        ax_close = plt.axes([0.92, 0.93, 0.07, 0.04])
-
-        self.button_play = Button(ax_play,  'Play', color=self.button_color['off'], hovercolor=self.button_color['on'])
-        #self.button_pause = Button(ax_pause, 'Pause', color=self.button_color['off'], hovercolor=self.button_color['on'])
-        self.button_stop = Button(ax_stop,  'Stop', color=self.button_color['off'], hovercolor=self.button_color['on'])
-        self.button_close = Button(ax_close, 'Close', color=self.button_color['off'], hovercolor=self.button_color['on'])
-
-        self.button_play.on_clicked(self.__on_play)
-        #self.button_pause.on_clicked(self.__on_pause)
-        self.button_stop.on_clicked(self.__on_stop)
-        self.button_close.on_clicked(self.__on_close_window)
 
         self.slider_time = SpanSelector(ax=self.ax1,
                                         onselect=self.__on_select,
@@ -398,7 +421,35 @@ class EventListVisualizer(object):
                                         onmove_callback=None,
                                         rectprops=dict(alpha=0.15, facecolor=self.color))
 
-        self.fig.canvas.mpl_connect('pick_event', self.__on_pick)
+        if not self.publication_mode:
+            ax_legend_label = plt.axes([0.92, 0.02, 0.10, 0.04])
+            ax_legend_label.axis('off')
+            ax_legend_label.text(0, 0, 'sed_vis', fontsize=16)
+
+
+            # Buttons
+            # ====================================
+            ax_play = plt.axes([0.125, 0.93, 0.07, 0.04])
+            #ax_pause = plt.axes([0.205, 0.93, 0.07, 0.04])
+            ax_stop = plt.axes([0.205, 0.93, 0.07, 0.04])
+            #ax_stop = plt.axes([0.285, 0.93, 0.07, 0.04])
+            ax_close = plt.axes([0.92, 0.93, 0.07, 0.04])
+
+            self.button_play = Button(ax_play,  'Play', color=self.button_color['off'], hovercolor=self.button_color['on'])
+            #self.button_pause = Button(ax_pause, 'Pause', color=self.button_color['off'], hovercolor=self.button_color['on'])
+            self.button_stop = Button(ax_stop,  'Stop', color=self.button_color['off'], hovercolor=self.button_color['on'])
+            self.button_close = Button(ax_close, 'Close', color=self.button_color['off'], hovercolor=self.button_color['on'])
+
+            self.button_play.on_clicked(self.__on_play)
+            #self.button_pause.on_clicked(self.__on_pause)
+            self.button_stop.on_clicked(self.__on_stop)
+            self.button_close.on_clicked(self.__on_close_window)
+
+
+            self.fig.canvas.mpl_connect('pick_event', self.__on_pick)
+        else:
+            plt.subplots_adjust(left=0.12, bottom=0.05, right=.97, top=0.95, wspace=0, hspace=0)
+        #self.fig.tight_layout()
 
         plt.show()
 

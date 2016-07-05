@@ -37,10 +37,17 @@ def process_arguments(argv):
                         nargs='+',
                         help='<Required> List of event list files',
                         required=True)
+
     parser.add_argument('-n',
                         '--names',
                         nargs='+',
                         help='List of names for event lists files (same order than event list files)',
+                        required=False)
+
+    parser.add_argument('-e',
+                        '--events',
+                        nargs='+',
+                        help='List of active event classes',
                         required=False)
 
     parser.add_argument('--time_domain',
@@ -58,6 +65,10 @@ def process_arguments(argv):
                         help="Minimum event gap",
                         type=float)
 
+    parser.add_argument('--publication',
+                        help="Strip visual elements out, use to generate figures for publication",
+                        action="store_true")
+
     parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
     return vars(parser.parse_args(argv[1:]))
 
@@ -71,11 +82,12 @@ def main(argv):
         audio, fs = sed_vis.io.load_audio(parameters['audio_file'])
     else:
         raise IOError('Audio file not found ['+parameters['audio_file']+']')
-
     event_lists = {}
+    event_list_order = []
     for id,list_file in enumerate(parameters['list']):
-        print id, list_file, parameters['names'][id]
+        print id, parameters['names'][id], list_file
         event_lists[parameters['names'][id]] = sed_vis.io.load_event_list(list_file)
+        event_list_order.append(parameters['names'][id])
 
     if parameters['spectrogram']:
         mode = 'spectrogram'
@@ -84,12 +96,25 @@ def main(argv):
     else:
         mode = None
 
+    if parameters['events']:
+        active_events = parameters['events']
+    else:
+        active_events = None
+
+    if parameters['publication']:
+        publication_mode = True
+    else:
+        publication_mode = False
+
     vis = sed_vis.visualization.EventListVisualizer(event_lists=event_lists,
+                                                    event_list_order=event_list_order,
+                                                    active_events=active_events,
                                                     audio_signal=audio,
                                                     sampling_rate=fs,
                                                     mode=mode,
                                                     minimum_event_length=parameters['minimum_event_length'],
                                                     minimum_event_gap=parameters['minimum_event_gap'],
+                                                    publication_mode=publication_mode
                                                     )
     vis.show()
 
