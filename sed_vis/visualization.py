@@ -225,12 +225,18 @@ class EventListVisualizer(object):
         self.legend_font_size = 12
         self.event_roll_label_font_size = 14
 
+        self.waveform_selector_point_hop = 1000
+        self.waveform_highlight_point_hop = 100
+
         if self.publication_mode:
             self.panel_title_font_size = 16
             self.legend_font_size = 16
 
             self.spec_cmap = 'jet'
             self.spec_interpolation = 'bicubic'
+
+            self.waveform_selector_point_hop = 5000
+            self.waveform_highlight_point_hop = 500
 
     def show(self):
         """Shows the visualizer.
@@ -253,9 +259,9 @@ class EventListVisualizer(object):
 
         self.timedomain_locations = numpy.arange(0, self.audio.signal.shape[0])
 
-        self.ax1.fill_between(self.timedomain_locations[::1000],
-                              self.audio.signal[::1000],
-                              -self.audio.signal[::1000],
+        self.ax1.fill_between(self.timedomain_locations[::self.waveform_selector_point_hop],
+                              self.audio.signal[::self.waveform_selector_point_hop],
+                              -self.audio.signal[::self.waveform_selector_point_hop],
                               color='0.5')
         plt.yticks([])
         plt.axis('tight')
@@ -297,7 +303,7 @@ class EventListVisualizer(object):
 
         elif self.mode == 'time_domain':
 
-            self.ax2.fill_between(self.x[::100], self.audio.signal[::100], -self.audio.signal[::100], color=self.color)
+            self.ax2.fill_between(self.x[::self.waveform_highlight_point_hop], self.audio.signal[::self.waveform_highlight_point_hop], -self.audio.signal[::self.waveform_highlight_point_hop], color=self.color)
 
             self.ax2.set_ylim(-1, 1)
             self.ax2.set_xlim(self.x[0], self.x[-1])
