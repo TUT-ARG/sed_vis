@@ -72,11 +72,13 @@ class EventListVisualizer(object):
                  spec_fft_size=1024,
                  spec_cmap='spectral',
                  spec_interpolation='nearest',
+                 event_roll_cmap='rainbow',
                  minimum_event_length=None,
                  minimum_event_gap=None,
                  color='#339933',
                  use_blit=False,
-                 publication_mode=False):
+                 publication_mode=False,
+                 show_selector=True):
         """Constructor
 
         Parameters
@@ -117,9 +119,14 @@ class EventListVisualizer(object):
         spec_cmap : str
             Color map used for spectrogram, see examples: http://matplotlib.org/examples/color/colormaps_reference.html
             (Default value='spectral')
+
         spec_interpolation : str
             Matrix interpolation method for spectrogram (e.g. nearest, bilear, bicubic, quadric, gaussian)
             (Default value='nearest')
+
+        event_roll_cmap : str
+            Color map used for spectrogram, see examples: http://matplotlib.org/examples/color/colormaps_reference.html
+            (Default value='rainbow')
 
         minimum_event_length : float > 0.0
             Minimum event length in seconds, shorten than given are filtered out from the output.
@@ -139,6 +146,10 @@ class EventListVisualizer(object):
         publication_mode : bool
             Strip visual elements, can be used to prepare figures for publications.
             (Default value=False)
+
+        show_selector : bool
+            Show highlight selector
+            (Default value=True)
 
         Returns
         -------
@@ -160,7 +171,7 @@ class EventListVisualizer(object):
         if active_events is None:
             self.active_events = self.event_labels
         else:
-            self.active_events = sorted(active_events)
+            self.active_events = sorted(active_events, reverse=True)
 
         for name in self._event_lists:
             self._event_lists[name] = self._event_lists[name].filter(minimum_event_length=minimum_event_length,
@@ -220,6 +231,7 @@ class EventListVisualizer(object):
         self.use_blit = use_blit
 
         self.publication_mode = publication_mode
+        self.show_selector = show_selector
 
         self.panel_title_font_size = 14
         self.legend_font_size = 12
@@ -227,9 +239,21 @@ class EventListVisualizer(object):
 
         self.waveform_selector_point_hop = 1000
         self.waveform_highlight_point_hop = 100
+        self.waveform_highlight_color = color
+
+        self.selector_panel_height = 10
+        self.highlight_panel_height = 25
+        self.event_roll_panel_height = 50
+
+        self.selector_panel_loc = 0
+        self.highlight_panel_loc = 17
+        self.event_roll_panel_loc = 45
+
+        self.event_roll_item_opacity = 0.5
+        self.fig_shape = (14, 6)
 
         if self.publication_mode:
-            self.panel_title_font_size = 16
+            self.panel_title_font_size = 14
             self.legend_font_size = 16
 
             self.spec_cmap = 'jet'
@@ -237,6 +261,36 @@ class EventListVisualizer(object):
 
             self.waveform_selector_point_hop = 5000
             self.waveform_highlight_point_hop = 500
+            self.waveform_highlight_color = 'black'
+            if self.show_selector:
+                if self.mode == 'time_domain':
+                    self.fig_shape = (30, 4)
+                elif self.mode == 'spectrogram':
+                    self.fig_shape = (20, 5)
+                self.selector_panel_height = 10
+                self.highlight_panel_height = 15
+                self.event_roll_panel_height = 60
+
+                self.selector_panel_loc = 0
+                self.highlight_panel_loc = 17
+                self.event_roll_panel_loc = 35
+            else:
+                if self.mode == 'time_domain':
+                    self.fig_shape = (30, 4)
+                elif self.mode == 'spectrogram':
+                    self.fig_shape = (20, 4)
+
+                self.selector_panel_height = 0
+                self.highlight_panel_height = 15
+                self.event_roll_panel_height = 75
+
+                self.selector_panel_loc = 0
+                self.highlight_panel_loc = 0
+                self.event_roll_panel_loc = 17
+
+            self.event_roll_item_opacity = 1.0
+
+        self.label_colormap = cm.get_cmap(name=event_roll_cmap)
 
     def show(self):
         """Shows the visualizer.
@@ -251,37 +305,38 @@ class EventListVisualizer(object):
 
         """
 
-        self.fig = plt.figure(figsize=(14, 6))
+        self.fig = plt.figure(figsize=self.fig_shape)
 
         # Selector panel
         # ====================================
-        self.ax1 = plt.subplot2grid(shape=(100, 1), loc=(0, 0), rowspan=10, colspan=1)
+        if self.show_selector:
+            self.ax1 = plt.subplot2grid(shape=(100, 1), loc=(self.selector_panel_loc, 0), rowspan=self.selector_panel_height, colspan=1)
 
-        self.timedomain_locations = numpy.arange(0, self.audio.signal.shape[0])
+            self.timedomain_locations = numpy.arange(0, self.audio.signal.shape[0])
 
-        self.ax1.fill_between(self.timedomain_locations[::self.waveform_selector_point_hop],
-                              self.audio.signal[::self.waveform_selector_point_hop],
-                              -self.audio.signal[::self.waveform_selector_point_hop],
-                              color='0.5')
-        plt.yticks([])
-        plt.axis('tight')
+            self.ax1.fill_between(self.timedomain_locations[::self.waveform_selector_point_hop],
+                                  self.audio.signal[::self.waveform_selector_point_hop],
+                                  -self.audio.signal[::self.waveform_selector_point_hop],
+                                  color='0.5')
+            plt.yticks([])
+            plt.axis('tight')
 
-        self.ax1.set_xlim(self.timedomain_locations[0], self.timedomain_locations[-1])
-        self.ax1.set_ylim(-1, 1)
+            self.ax1.set_xlim(self.timedomain_locations[0], self.timedomain_locations[-1])
+            self.ax1.set_ylim(-1, 1)
 
-        self.__time_ticks(locations=self.timedomain_locations, n_ticks=10, sampling_rate=self.audio.fs)
+            self.__time_ticks(locations=self.timedomain_locations, n_ticks=10, sampling_rate=self.audio.fs)
 
-        self.ax1.yaxis.grid(False, which='major')
-        self.ax1.yaxis.grid(False, which='minor')
-        self.ax1.xaxis.grid(True, which='major')
-        self.ax1.xaxis.grid(True, which='minor')
-        self.ax1.yaxis.set_label_position("right")
+            self.ax1.yaxis.grid(False, which='major')
+            self.ax1.yaxis.grid(False, which='minor')
+            self.ax1.xaxis.grid(True, which='major')
+            self.ax1.xaxis.grid(True, which='minor')
+            self.ax1.yaxis.set_label_position("right")
 
-        plt.title('Selection', fontsize=self.panel_title_font_size)
+            plt.title('Selection', fontsize=self.panel_title_font_size)
 
         # Highlight panel
         # ====================================
-        self.ax2 = plt.subplot2grid(shape=(100, 1), loc=(17, 0), rowspan=25, colspan=1)
+        self.ax2 = plt.subplot2grid(shape=(100, 1), loc=(self.highlight_panel_loc, 0), rowspan=self.highlight_panel_height, colspan=1)
         self.x = numpy.arange(0, self.audio.duration_samples)
 
         self.begin_time = float(self.x[0]) / self.audio.fs
@@ -294,16 +349,19 @@ class EventListVisualizer(object):
                                             hop_length=self.spec_hop_size)
 
             self.__plot_spectrogram(self.D, sampling_rate=self.audio.fs, interpolation=self.spec_interpolation, cmap=self.spec_cmap)
+            if not self.publication_mode:
+                self.ax2.yaxis.grid(False, which='major')
+                self.ax2.yaxis.grid(False, which='minor')
+                self.ax2.xaxis.grid(False, which='major')
+                self.ax2.xaxis.grid(False, which='minor')
 
-            self.ax2.yaxis.grid(False, which='major')
-            self.ax2.yaxis.grid(False, which='minor')
-            self.ax2.xaxis.grid(False, which='major')
-            self.ax2.xaxis.grid(False, which='minor')
-            plt.ylabel('Spectrogram', fontsize=self.panel_title_font_size)
-
+                plt.ylabel('Spectrogram', fontsize=self.panel_title_font_size)
+            else:
+                self.ax2.get_yaxis().set_visible(False)
         elif self.mode == 'time_domain':
 
-            self.ax2.fill_between(self.x[::self.waveform_highlight_point_hop], self.audio.signal[::self.waveform_highlight_point_hop], -self.audio.signal[::self.waveform_highlight_point_hop], color=self.color)
+            self.ax2.fill_between(self.x[::self.waveform_highlight_point_hop], self.audio.signal[::self.waveform_highlight_point_hop], -self.audio.signal[::self.waveform_highlight_point_hop],
+                                  color=self.waveform_highlight_color)
 
             self.ax2.set_ylim(-1, 1)
             self.ax2.set_xlim(self.x[0], self.x[-1])
@@ -321,7 +379,8 @@ class EventListVisualizer(object):
 
             self.ax2.xaxis.grid(True, which='major')
             self.ax2.xaxis.grid(True, which='minor')
-            plt.ylabel('Waveform', fontsize=self.panel_title_font_size)
+            if not self.publication_mode:
+                plt.ylabel('Waveform', fontsize=self.panel_title_font_size)
 
         self.ax2.yaxis.set_label_position("right")
 
@@ -334,15 +393,14 @@ class EventListVisualizer(object):
         self.begin_time = 0
         self.end_time = self.audio.duration_seconds
 
-        color_map = cm.rainbow
         if event_list_count == 1:
             norm = colors.Normalize(vmin=0, vmax=self.event_label_count)
-            self.ax3 = plt.subplot2grid(shape=(100, 1), loc=(45, 0), rowspan=60, colspan=1)
+            self.ax3 = plt.subplot2grid(shape=(100, 1), loc=(self.event_roll_panel_loc, 0), rowspan=self.event_roll_panel_height+10, colspan=1)
         else:
-            norm = colors.Normalize(vmin=0, vmax=event_list_count-1)
-            self.ax3 = plt.subplot2grid(shape=(100, 1), loc=(45, 0), rowspan=50, colspan=1)
+            norm = colors.Normalize(vmin=0, vmax=event_list_count)#-1)
+            self.ax3 = plt.subplot2grid(shape=(100, 1), loc=(self.event_roll_panel_loc, 0), rowspan=self.event_roll_panel_height, colspan=1)
 
-        m = cm.ScalarMappable(norm=norm, cmap=color_map)
+        m = cm.ScalarMappable(norm=norm, cmap=self.label_colormap)
 
         line_margin = 0.1
         y = 0
@@ -358,10 +416,10 @@ class EventListVisualizer(object):
                 line = plt.Rectangle((0, y-0.5),
                                      height=0.001,
                                      width=self.end_time,
-                                     edgecolor=m.to_rgba(0),
-                                     facecolor=m.to_rgba(0))
+                                     edgecolor='black',
+                                     facecolor='black')
                 plt.gca().add_patch(line)
-                #print label, event_list_id, event_list_label, y, event_y
+
                 for event in self._event_lists[event_list_label]:
                     if event['event_label'] == label:
                         event_length = event['event_offset'] - event['event_onset']
@@ -374,7 +432,8 @@ class EventListVisualizer(object):
                                                   width=event_length,
                                                   edgecolor='black',
                                                   facecolor=color,
-                                                  alpha=0.5,
+                                                  linewidth=0,
+                                                  alpha=self.event_roll_item_opacity,
                                                   picker=5)
                         plt.gca().add_patch(rectangle)
             y += 1
@@ -382,8 +441,8 @@ class EventListVisualizer(object):
         line = plt.Rectangle((0, y - 0.5),
                              height=0.001,
                              width=self.end_time,
-                             edgecolor=m.to_rgba(0),
-                             facecolor=m.to_rgba(0))
+                             edgecolor='black',
+                             facecolor='black')
         plt.gca().add_patch(line)
         # Axis
         plt.axis([0, self.audio.duration_seconds, -0.5, len(self.active_events) + 0.5])
@@ -417,15 +476,15 @@ class EventListVisualizer(object):
                 ax_legend_label.axis('off')
                 ax_legend_label.text(0, 0, event_list_label, fontsize=self.legend_font_size)
                 span += 0.15
-
-        self.slider_time = SpanSelector(ax=self.ax1,
-                                        onselect=self.__on_select,
-                                        minspan=None,
-                                        direction='horizontal',
-                                        span_stays=True,
-                                        useblit=self.use_blit,
-                                        onmove_callback=None,
-                                        rectprops=dict(alpha=0.15, facecolor=self.color))
+        if self.show_selector:
+            self.slider_time = SpanSelector(ax=self.ax1,
+                                            onselect=self.__on_select,
+                                            minspan=None,
+                                            direction='horizontal',
+                                            span_stays=True,
+                                            useblit=self.use_blit,
+                                            onmove_callback=None,
+                                            rectprops=dict(alpha=0.15, facecolor=self.color))
 
         if not self.publication_mode:
             ax_legend_label = plt.axes([0.92, 0.02, 0.10, 0.04])
