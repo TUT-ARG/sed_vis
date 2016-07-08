@@ -18,7 +18,8 @@ if mode == 'publication':
                                                     spec_interpolation='bicubic',
                                                     spec_win_size=1024,
                                                     spec_hop_size=1024/8,
-                                                    spec_fft_size=1024)
+                                                    spec_fft_size=1024,
+                                                    publication_mode=True)
     vis.show()
 
 elif mode == 'sync':
