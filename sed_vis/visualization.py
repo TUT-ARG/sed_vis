@@ -236,6 +236,7 @@ class EventListVisualizer(object):
         self.panel_title_font_size = 14
         self.legend_font_size = 12
         self.event_roll_label_font_size = 14
+        self.event_roll_time_font_size = 10
 
         self.waveform_selector_point_hop = 1000
         self.waveform_highlight_point_hop = 100
@@ -255,6 +256,7 @@ class EventListVisualizer(object):
         if self.publication_mode:
             self.panel_title_font_size = 14
             self.legend_font_size = 16
+            self.event_roll_time_font_size = 12
 
             self.spec_cmap = 'jet'
             self.spec_interpolation = 'bicubic'
@@ -267,16 +269,29 @@ class EventListVisualizer(object):
                     self.fig_shape = (30, 4)
                 elif self.mode == 'spectrogram':
                     self.fig_shape = (20, 5)
-                self.selector_panel_height = 10
-                self.highlight_panel_height = 15
-                self.event_roll_panel_height = 60
 
-                self.selector_panel_loc = 0
-                self.highlight_panel_loc = 17
-                self.event_roll_panel_loc = 35
+                if self.event_label_count == 1:
+                    self.selector_panel_height = 10
+                    self.highlight_panel_height = 33
+                    self.event_roll_panel_height = 33
+
+                    self.selector_panel_loc = 0
+                    self.highlight_panel_loc = 17
+                    self.event_roll_panel_loc = 53
+
+                    self.event_roll_time_font_size = 16
+                else:
+                    self.selector_panel_height = 10
+                    self.highlight_panel_height = 15
+                    self.event_roll_panel_height = 60
+
+                    self.selector_panel_loc = 0
+                    self.highlight_panel_loc = 17
+                    self.event_roll_panel_loc = 35
             else:
                 if self.mode == 'time_domain':
                     self.fig_shape = (30, 4)
+
                 elif self.mode == 'spectrogram':
                     self.fig_shape = (20, 4)
 
@@ -288,9 +303,13 @@ class EventListVisualizer(object):
                 self.highlight_panel_loc = 0
                 self.event_roll_panel_loc = 17
 
+
+
             self.event_roll_item_opacity = 1.0
 
         self.label_colormap = cm.get_cmap(name=event_roll_cmap)
+
+        print self.event_label_count
 
     def show(self):
         """Shows the visualizer.
@@ -454,6 +473,7 @@ class EventListVisualizer(object):
         # X axis
         self.ax3.xaxis.grid(True, which='major')
         self.ax3.xaxis.grid(True, which='minor')
+        plt.tick_params(axis='x', which='major', labelsize=self.event_roll_time_font_size)
 
         # Y axis
         plt.yticks(numpy.arange(len(self.active_events)), self.active_events, fontsize=self.event_roll_label_font_size)
