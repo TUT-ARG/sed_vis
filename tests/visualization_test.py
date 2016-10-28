@@ -1,12 +1,28 @@
+#!/usr/bin/env python
 import sed_vis
 import os
 
-mode = 'publication'
+mode = 'dcase2016'
+current_path = os.path.dirname(os.path.realpath(__file__))
 
-if mode == 'publication':
+if mode == 'dcase2016':
+    pass
+    audio, fs = sed_vis.io.load_audio(os.path.join(current_path, 'data/sound_event/dcase2016/a030_mono_16.wav'))
+    vis = sed_vis.visualization.EventListVisualizer(event_lists={'reference': sed_vis.io.load_event_list(os.path.join(current_path,'data/sound_event/dcase2016/a030.ann'))},
+                                                    event_list_order=['reference'],
+                                                    audio_signal=audio,
+                                                    sampling_rate=fs,
+                                                    spec_cmap='jet',
+                                                    spec_interpolation='bicubic',
+                                                    spec_win_size=1024,
+                                                    spec_hop_size=1024/2,
+                                                    spec_fft_size=1024,
+                                                    publication_mode=True)
+    vis.show()
+
+elif mode == 'publication':
     # Example how to create plots for publications, use "save the figure" button and
     # select svg format. Open figure in e.g. inkscape and edit to your liking.
-    current_path = os.path.dirname(os.path.realpath(__file__))
     audio, fs = sed_vis.io.load_audio(os.path.join(current_path, 'data/a001.wav'))
     vis = sed_vis.visualization.EventListVisualizer(event_lists={'reference': sed_vis.io.load_event_list(os.path.join(current_path,'data/a001.ann')),
                                                                  'full': sed_vis.io.load_event_list(os.path.join(current_path,'data/a001_full.ann')),
@@ -24,7 +40,6 @@ if mode == 'publication':
 
 elif mode == 'sync':
     # Test for audio and visual synchronization during the playback.
-    current_path = os.path.dirname(os.path.realpath(__file__))
     audio, fs = sed_vis.io.load_audio(os.path.join(current_path, 'data/sync/sin_silence.wav'))
     vis = sed_vis.visualization.EventListVisualizer(event_lists={'reference': sed_vis.io.load_event_list(os.path.join(current_path,'data/sync/sin_silence.txt'))},
                                                     audio_signal=audio,
