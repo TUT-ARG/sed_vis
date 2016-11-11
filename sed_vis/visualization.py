@@ -262,7 +262,7 @@ class EventListVisualizer(object):
             self.legend_font_size = 16
             self.event_roll_time_font_size = 12
 
-            self.spec_cmap = 'jet'
+            self.spec_cmap = 'magma_r'
             self.spec_interpolation = 'bicubic'
             if not waveform_selector_point_hop:
                 self.waveform_selector_point_hop = 5000
