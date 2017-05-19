@@ -57,7 +57,7 @@ class AudioPlayer(object):
 
     @property
     def duration_seconds(self):
-        return self.signal.shape[0] / self.sampling_rate
+        return self.signal.shape[0] / float(self.sampling_rate)
 
     @property
     def duration_samples(self):
