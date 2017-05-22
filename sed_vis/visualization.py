@@ -796,9 +796,6 @@ class EventListVisualizer(object):
         self.button_play.color = self.button_color['off']
         self.button_play.hovercolor = self.button_color['off']
 
-        #self.button_pause.color = self.button_color['off']
-        #self.button_pause.hovercolor = self.button_color['off']
-
         self.button_stop.color = self.button_color['off']
         self.button_stop.hovercolor = self.button_color['off']
 
@@ -832,7 +829,7 @@ class EventListVisualizer(object):
         else:
             self.event_panel_indicator_line.set_visible(False)
             if self.animation_event_roll_panel is not None:
-                self.animation_event_roll_panel._stop()
+                self.animation_event_roll_panel.event_source.stop()
                 self.animation_event_roll_panel = None
 
             self.fig.canvas.draw()
@@ -855,7 +852,7 @@ class EventListVisualizer(object):
         else:
             self.selector_panel_indicator_line.set_visible(False)
             if self.animation_selector_panel is not None:
-                self.animation_selector_panel._stop()
+                self.animation_selector_panel.event_source.stop()
                 self.animation_selector_panel = None
 
         return self.selector_panel_indicator_line,
@@ -890,7 +887,7 @@ class EventListVisualizer(object):
         else:
             self.highlight_panel_indicator_line.set_visible(False)
             if self.animation_highlight_panel is not None:
-                self.animation_highlight_panel._stop()
+                self.animation_highlight_panel.event_source.stop()
                 self.animation_highlight_panel = None
 
         return self.highlight_panel_indicator_line,
