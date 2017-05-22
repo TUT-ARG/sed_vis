@@ -54,7 +54,7 @@ def load_audio(filename, mono=True, fs=44100):
         audio_data, sample_rate = soundfile.read(filename)
         audio_data = audio_data.T
 
-        if mono:
+        if mono and len(audio_data.shape) > 1:
             # Down-mix audio
             audio_data = numpy.mean(audio_data, axis=0)
 
