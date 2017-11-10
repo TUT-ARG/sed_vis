@@ -20,6 +20,7 @@ import scipy.signal
 import util.event_list
 import soundfile
 
+
 def load_audio(filename, mono=True, fs=44100):
     """Load audio file into numpy array
 
@@ -217,5 +218,6 @@ def isfloat(value):
   try:
     float(value)
     return True
+
   except ValueError:
     return False
