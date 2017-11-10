@@ -17,9 +17,9 @@ comparison of the reference and estimated event lists.
     EventListVisualizer.show
 
 """
-import util.event_list
-import util.audio_player
 
+import util.audio_player
+import dcase_util
 import numpy
 import math
 import time
@@ -49,13 +49,13 @@ class EventListVisualizer(object):
     Examples
     --------
     >>> # Load audio signal first
-    >>> audio, fs = sed_vis.io.load_audio('data/audio.wav')
+    >>> audio_container = dcase_util.containers.AudioContainer().load('data/audio.wav')
     >>> # Load event lists
-    >>> reference_event_list = sed_vis.io.load_event_list('data/reference.txt')
-    >>> estimated_event_list = sed_vis.io.load_event_list('data/estimated.txt')
+    >>> reference_event_list = dcase_util.containers.MetaDataContainer().load('data/reference.txt')
+    >>> estimated_event_list = dcase_util.containers.MetaDataContainer().load('data/estimated.txt')
     >>> event_lists = {'reference': reference_event_list, 'estimated': estimated_event_list}
     >>> # Visualize the data
-    >>> vis = sed_vis.visualization.EventListVisualizer(event_lists=event_lists,audio_signal=audio,sampling_rate=fs)
+    >>> vis = sed_vis.visualization.EventListVisualizer(event_lists=event_lists,audio_signal=audio_container.data,sampling_rate=audio_container.fs)
     >>> vis.show()
 
     """
@@ -153,18 +153,21 @@ class EventListVisualizer(object):
             else:
                 self._event_list_order = kwargs.get('event_list_order')
 
-            events = util.event_list.EventList()
+            events = dcase_util.containers.MetaDataContainer()
             for event_list_label in self._event_lists:
                 events += self._event_lists[event_list_label]
+
             self.event_labels = sorted(events.unique_event_labels, reverse=True)
-            self.event_label_count = len(self.event_labels)
+            self.event_label_count = events.event_label_count
+
             if kwargs.get('active_events') is None:
                 self.active_events = self.event_labels
+
             else:
                 self.active_events = sorted(kwargs.get('active_events'), reverse=True)
 
             for name in self._event_lists:
-                self._event_lists[name] = self._event_lists[name].filter(
+                self._event_lists[name] = self._event_lists[name].process_events(
                     minimum_event_length=kwargs.get('minimum_event_length'),
                     minimum_event_gap=kwargs.get('minimum_event_gap')
                 )
@@ -526,13 +529,13 @@ class EventListVisualizer(object):
 
                     for event in self._event_lists[event_list_label]:
                         if event['event_label'] == label:
-                            event_length = event['event_offset'] - event['event_onset']
+                            event_length = event['offset'] - event['onset']
                             if event_list_count == 1:
                                 color = m.to_rgba(y + offset)
                             else:
                                 color = m.to_rgba(event_list_id)
                             rectangle = plt.Rectangle(
-                                (event['event_onset'], event_y),
+                                (event['onset'], event_y),
                                 height=annotation_height,
                                 width=event_length,
                                 edgecolor='black',
@@ -1299,7 +1302,7 @@ class EventListVerifier(EventListVisualizer):
 
                     for event in self._event_lists[event_list_label]:
                         if event['event_label'] == label:
-                            event_length = event['event_offset'] - event['event_onset']
+                            event_length = event['offset'] - event['onset']
 
                             if event_list_count == 1:
                                 color = m.to_rgba(y + offset)
@@ -1307,7 +1310,7 @@ class EventListVerifier(EventListVisualizer):
                                 color = m.to_rgba(event_list_id)
 
                             rectangle = plt.Rectangle(
-                                (event['event_onset'], event_y),
+                                (event['onset'], event_y),
                                 height=annotation_height,
                                 width=event_length,
                                 edgecolor='black',

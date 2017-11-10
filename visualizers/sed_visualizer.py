@@ -8,6 +8,7 @@ import os
 import argparse
 import textwrap
 import sed_vis
+import dcase_util
 
 __version_info__ = ('0', '1', '0')
 __version__ = '.'.join(__version_info__)
@@ -61,6 +62,7 @@ def process_arguments(argv):
     parser.add_argument('--minimum_event_length',
                         help="Minimum event length",
                         type=float)
+
     parser.add_argument('--minimum_event_gap',
                         help="Minimum event gap",
                         type=float)
@@ -76,21 +78,9 @@ def process_arguments(argv):
 def main(argv):
     """
     """
-
+    ui = dcase_util.ui.FancyPrinter()
+    ui.section_header('sed_visualizer')
     parameters = process_arguments(argv)
-
-    if os.path.isfile(parameters['audio_file']):
-        audio, fs = sed_vis.io.load_audio(parameters['audio_file'])
-    else:
-        raise IOError('Audio file not found ['+parameters['audio_file']+']')
-
-    event_lists = {}
-    event_list_order = []
-
-    for id, list_file in enumerate(parameters['list']):
-        print id, parameters['names'][id], list_file
-        event_lists[parameters['names'][id]] = sed_vis.io.load_event_list(list_file)
-        event_list_order.append(parameters['names'][id])
 
     if parameters['spectrogram']:
         mode = 'spectrogram'
@@ -112,12 +102,41 @@ def main(argv):
     else:
         publication_mode = False
 
+    audio_container = dcase_util.containers.AudioContainer().load(
+        parameters['audio_file']
+    )
+    ui.data(field='Audio file', value=parameters['audio_file'])
+
+    event_lists = {}
+    event_list_order = []
+
+    ui.line('Event lists', indent=2)
+    ui.row('ID', 'Label', 'Event list file',
+           widths=[5, 15, 40],
+           types=['int', 'str15', 'str40'],
+           indent=4
+           )
+    ui.row('-', '-', '-')
+    for id, list_file in enumerate(parameters['list']):
+        ui.row(id, parameters['names'][id], list_file)
+
+        event_lists[parameters['names'][id]] = dcase_util.containers.MetaDataContainer().load(list_file)
+        event_list_order.append(parameters['names'][id])
+
+    ui.line()
+    ui.data(field='Mode', value=mode)
+    ui.data(field='Active events', value=active_events)
+    ui.data(field='Publication mode', value=publication_mode)
+    ui.data(field='minimum event length', value=parameters['minimum_event_length'], unit='sec')
+    ui.data(field='minimum event gap', value=parameters['minimum_event_gap'], unit='sec')
+    ui.sep()
+
     vis = sed_vis.visualization.EventListVisualizer(
         event_lists=event_lists,
         event_list_order=event_list_order,
         active_events=active_events,
-        audio_signal=audio,
-        sampling_rate=fs,
+        audio_signal=audio_container.data,
+        sampling_rate=audio_container.fs,
         mode=mode,
         minimum_event_length=parameters['minimum_event_length'],
         minimum_event_gap=parameters['minimum_event_gap'],
@@ -130,5 +149,6 @@ def main(argv):
 if __name__ == "__main__":
     try:
         sys.exit(main(sys.argv))
+
     except (ValueError, IOError) as e:
         sys.exit(e)

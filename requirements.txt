@@ -3,3 +3,4 @@ scipy>=0.9.0
 matplotlib>=1.4.0
 pyaudio>=0.2.8
 soundfile>=0.9.0
+dcase_util>=0.1.5

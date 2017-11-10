@@ -3,12 +3,13 @@ from setuptools import setup
 try:
     import pypandoc
     long_description = pypandoc.convert('README.md', 'rst')
+
 except (IOError, ImportError):
     long_description = open('README.md').read()
 
 setup(
     name='sed_vis',
-    version='0.1.1',
+    version='0.1.2',
     description='Visualization tools for sound event detection research.',
     author='Toni Heittola',
     author_email='toni.heittola@gmail.com',

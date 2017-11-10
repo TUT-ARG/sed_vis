@@ -56,6 +56,7 @@ The toolbox is tested with Python 2.7.10.
 * scipy >= 0.9.0
 * matplotlib >= 1.4.0
 * pyaudio >= 0.2.7
+* dcase_util >= 0.1.5
 
 *Mac*
 
@@ -117,19 +118,30 @@ After ``sed_vis`` is installed, it can be imported and used to your Python code 
 
 ```python
 import sed_vis
+import dcase_util
 
 # Load audio signal first
-audio, fs = sed_vis.io.load_audio('tests/data/a001.wav')
+audio_container = dcase_util.containers.AudioContainer().load(
+    'tests/data/a001.wav'
+)
 
 # Load event lists
-reference_event_list = sed_vis.io.load_event_list('tests/data/a001.ann')
-estimated_event_list = sed_vis.io.load_event_list('tests/data/a001_system_output.ann')
-event_lists = {'reference': reference_event_list, 'estimated': estimated_event_list}
+reference_event_list = dcase_util.containers.MetaDataContainer().load(
+    'tests/data/a001.ann'
+)
+estimated_event_list = dcase_util.containers.MetaDataContainer().load(
+    'tests/data/a001_system_output.ann'
+)
+
+event_lists = {
+    'reference': reference_event_list, 
+    'estimated': estimated_event_list
+}
 
 # Visualize the data
 vis = sed_vis.visualization.EventListVisualizer(event_lists=event_lists,
-                                                audio_signal=audio,
-                                                sampling_rate=fs)
+                                                audio_signal=audio_container.data,
+                                                sampling_rate=audio_container.fs)
 vis.show()
 ```
 

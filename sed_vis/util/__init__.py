@@ -4,16 +4,6 @@
 Utilities
 ==================
 
-
-Event list operations
------------
-
-.. autosummary::
-    :toctree: generated/
-
-    event_list.unique_event_labels
-    event_list.max_event_offset
-
 Audio player
 -----------
 
@@ -27,6 +17,5 @@ Audio player
 """
 
 from .audio_player import *
-from .event_list import *
 
 __all__ = [_ for _ in dir() if not _.startswith('_')]

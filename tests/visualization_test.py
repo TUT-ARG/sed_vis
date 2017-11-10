@@ -1,18 +1,28 @@
 #!/usr/bin/env python
 import sed_vis
+import dcase_util
 import os
-
+from IPython import embed
+#embed()
 mode = 'multiple'
 current_path = os.path.dirname(os.path.realpath(__file__))
 
 if mode == 'dcase2016':
-    pass
-    audio, fs = sed_vis.io.load_audio(os.path.join(current_path, 'data/sound_event/dcase2016/a030_mono_16.wav'))
+    audio_container = dcase_util.containers.AudioContainer().load(
+        os.path.join(current_path, 'data', 'a001.wav')
+    )
+
+    event_lists = {
+        'reference': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'a001.ann')
+        )
+    }
+
     vis = sed_vis.visualization.EventListVisualizer(
-        event_lists={'reference': sed_vis.io.load_event_list(os.path.join(current_path, 'data/sound_event/dcase2016/a030.ann'))},
+        event_lists=event_lists,
         event_list_order=['reference'],
-        audio_signal=audio,
-        sampling_rate=fs,
+        audio_signal=audio_container.data,
+        sampling_rate=audio_container.fs,
         spec_cmap='jet',
         spec_interpolation='bicubic',
         spec_win_size=1024,
@@ -26,14 +36,26 @@ if mode == 'dcase2016':
 elif mode == 'publication':
     # Example how to create plots for publications, use "save the figure" button and
     # select svg format. Open figure in e.g. inkscape and edit to your liking.
-    audio, fs = sed_vis.io.load_audio(os.path.join(current_path, 'data/a001.wav'))
+    audio_container = dcase_util.containers.AudioContainer().load(
+        os.path.join(current_path, 'data', 'a001.wav')
+    )
+    event_lists = {
+        'reference': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'a001.ann')
+        ),
+        'full': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'a001_full.ann')
+        ),
+        'estimated': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'a001_system_output.ann')
+        )
+    }
+
     vis = sed_vis.visualization.EventListVisualizer(
-        event_lists={'reference': sed_vis.io.load_event_list(os.path.join(current_path, 'data/a001.ann')),
-                     'full': sed_vis.io.load_event_list(os.path.join(current_path, 'data/a001_full.ann')),
-                     'estimated': sed_vis.io.load_event_list(os.path.join(current_path, 'data/a001_system_output.ann'))},
+        event_lists=event_lists,
         event_list_order=['reference', 'full', 'estimated'],
-        audio_signal=audio,
-        sampling_rate=fs,
+        audio_signal=audio_container.data,
+        sampling_rate=audio_container.fs,
         spec_cmap='jet',
         spec_interpolation='bicubic',
         spec_win_size=1024,
@@ -46,11 +68,20 @@ elif mode == 'publication':
 
 elif mode == 'sync':
     # Test for audio and visual synchronization during the playback.
-    audio, fs = sed_vis.io.load_audio(os.path.join(current_path, 'data/sync/sin_silence.wav'))
+    audio_container = dcase_util.containers.AudioContainer().load(
+        os.path.join(current_path, 'data', 'sync', 'sin_silence.wav')
+    )
+
+    event_lists = {
+        'reference': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'sync', 'sin_silence.txt')
+        )
+    }
+
     vis = sed_vis.visualization.EventListVisualizer(
-        event_lists={'reference': sed_vis.io.load_event_list(os.path.join(current_path, 'data/sync/sin_silence.txt'))},
-        audio_signal=audio,
-        sampling_rate=fs,
+        event_lists=event_lists,
+        audio_signal=audio_container.data,
+        sampling_rate=audio_container.fs,
         mode='time_domain'
     )
 
@@ -58,14 +89,27 @@ elif mode == 'sync':
 
 elif mode == 'multiple':
     # Test visualization of multiple system outputs
-    audio, fs = sed_vis.io.load_audio(os.path.join(current_path, 'data/a001.wav'))
+    audio_container = dcase_util.containers.AudioContainer().load(
+        os.path.join(current_path, 'data', 'a001.wav')
+    )
+
+    event_lists = {
+        'reference': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'a001.ann')
+        ),
+        'estimated1': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'a001_system_output.ann')
+        ),
+        'estimated2': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'a001_system_output_2.ann')
+        )
+    }
+
     vis = sed_vis.visualization.EventListVisualizer(
-        event_lists={'reference': sed_vis.io.load_event_list(os.path.join(current_path, 'data/a001.ann')),
-                     'estimated1': sed_vis.io.load_event_list(os.path.join(current_path, 'data/a001_system_output.ann')),
-                     'estimated2': sed_vis.io.load_event_list(os.path.join(current_path, 'data/a001_system_output_2.ann'))},
+        event_lists=event_lists,
         event_list_order=['reference', 'estimated1', 'estimated2'],
-        audio_signal=audio,
-        sampling_rate=fs,
+        audio_signal=audio_container.data,
+        sampling_rate=audio_container.fs,
         spec_cmap='jet',
         spec_interpolation='bicubic',
         spec_win_size=1024,
