@@ -78,21 +78,26 @@ def main(argv):
     """
 
     parameters = process_arguments(argv)
+
     if os.path.isfile(parameters['audio_file']):
         audio, fs = sed_vis.io.load_audio(parameters['audio_file'])
     else:
         raise IOError('Audio file not found ['+parameters['audio_file']+']')
+
     event_lists = {}
     event_list_order = []
-    for id,list_file in enumerate(parameters['list']):
+
+    for id, list_file in enumerate(parameters['list']):
         print id, parameters['names'][id], list_file
         event_lists[parameters['names'][id]] = sed_vis.io.load_event_list(list_file)
         event_list_order.append(parameters['names'][id])
 
     if parameters['spectrogram']:
         mode = 'spectrogram'
+
     elif parameters['time_domain']:
         mode = 'time_domain'
+
     else:
         mode = None
 
@@ -103,20 +108,24 @@ def main(argv):
 
     if parameters['publication']:
         publication_mode = True
+
     else:
         publication_mode = False
 
-    vis = sed_vis.visualization.EventListVisualizer(event_lists=event_lists,
-                                                    event_list_order=event_list_order,
-                                                    active_events=active_events,
-                                                    audio_signal=audio,
-                                                    sampling_rate=fs,
-                                                    mode=mode,
-                                                    minimum_event_length=parameters['minimum_event_length'],
-                                                    minimum_event_gap=parameters['minimum_event_gap'],
-                                                    publication_mode=publication_mode
-                                                    )
+    vis = sed_vis.visualization.EventListVisualizer(
+        event_lists=event_lists,
+        event_list_order=event_list_order,
+        active_events=active_events,
+        audio_signal=audio,
+        sampling_rate=fs,
+        mode=mode,
+        minimum_event_length=parameters['minimum_event_length'],
+        minimum_event_gap=parameters['minimum_event_gap'],
+        publication_mode=publication_mode
+    )
+
     vis.show()
+
 
 if __name__ == "__main__":
     try:
