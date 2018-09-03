@@ -17,8 +17,8 @@ comparison of the reference and estimated event lists.
     EventListVisualizer.show
 
 """
-
-import util.audio_player
+from __future__ import print_function, absolute_import
+from sed_vis.util import AudioPlayer, AudioThread
 import dcase_util
 import numpy
 import math
@@ -100,7 +100,7 @@ class EventListVisualizer(object):
 
         spec_cmap : str
             Color map used for spectrogram, see examples: http://matplotlib.org/examples/color/colormaps_reference.html
-            (Default value='spectral')
+            (Default value='magma')
 
         spec_interpolation : str
             Matrix interpolation method for spectrogram (e.g. nearest, bilear, bicubic, quadric, gaussian)
@@ -177,7 +177,7 @@ class EventListVisualizer(object):
 
         if kwargs.get('audio_signal') is not None and kwargs.get('sampling_rate') is not None:
             audio_signal = kwargs.get('audio_signal') / numpy.max(numpy.abs(kwargs.get('audio_signal')))
-            self.audio = util.audio_player.AudioPlayer(
+            self.audio = AudioPlayer(
                 signal=audio_signal,
                 sampling_rate=kwargs.get('sampling_rate')
             )
@@ -192,7 +192,7 @@ class EventListVisualizer(object):
         self.spec_hop_size = kwargs.get('spec_hop_size', 256)
         self.spec_win_size = kwargs.get('spec_win_size', 1024)
         self.spec_fft_size = kwargs.get('spec_fft_size', 1024)
-        self.spec_cmap = kwargs.get('spec_cmap', 'spectral')
+        self.spec_cmap = kwargs.get('spec_cmap', 'magma')
         self.spec_interpolation =  kwargs.get('spec_interpolation', 'nearest')
 
         self.color = kwargs.get('color', '#339933')
@@ -1032,7 +1032,7 @@ class EventListVisualizer(object):
         n_frames = 1 + int((len(audio) - n_fft) / hop_length)
         y_frames = as_strided(x=audio,
                               shape=(n_fft, n_frames),
-                              strides=(audio.itemsize, hop_length * audio.itemsize))
+                              strides=(audio.itemsize, int(hop_length * audio.itemsize)))
 
         S = numpy.empty((int(1 + n_fft // 2), y_frames.shape[1]), dtype=numpy.complex64, order='F')
 
@@ -1059,7 +1059,7 @@ class EventListVisualizer(object):
         return log_spec
 
     @staticmethod
-    def plot_spectrogram(data, sampling_rate=44100, n_yticks=5, interpolation='nearest', cmap='spectral'):
+    def plot_spectrogram(data, sampling_rate=44100, n_yticks=5, interpolation='nearest', cmap='magma'):
 
         axes = plt.imshow(data, aspect='auto', origin='lower', interpolation=interpolation, cmap=plt.get_cmap(cmap))
 

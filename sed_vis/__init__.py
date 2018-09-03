@@ -2,6 +2,6 @@
 """Top-level module for sed_vis"""
 
 # Import all submodules
-from .visualization import *
+from . import visualization
 
 __version__ = '0.1'
