@@ -2,8 +2,7 @@
 import sed_vis
 import dcase_util
 import os
-from IPython import embed
-#embed()
+
 mode = 'multiple'
 current_path = os.path.dirname(os.path.realpath(__file__))
 
