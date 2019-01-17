@@ -3,7 +3,7 @@ import sed_vis
 import dcase_util
 import os
 
-mode = 'multiple'
+mode = 'probability'
 current_path = os.path.dirname(os.path.realpath(__file__))
 
 if mode == 'dcase2016':
@@ -107,6 +107,34 @@ elif mode == 'multiple':
     vis = sed_vis.visualization.EventListVisualizer(
         event_lists=event_lists,
         event_list_order=['reference', 'estimated1', 'estimated2'],
+        audio_signal=audio_container.data,
+        sampling_rate=audio_container.fs,
+        spec_cmap='jet',
+        spec_interpolation='bicubic',
+        spec_win_size=1024,
+        spec_hop_size=1024/8,
+        spec_fft_size=1024,
+        publication_mode=True
+    )
+
+    vis.show()
+
+elif mode == 'probability':
+    audio_container = dcase_util.containers.AudioContainer().load(
+        os.path.join(current_path, 'data', 'a001.wav')
+    )
+    event_lists = {
+        'reference': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'a001.ann')
+        ),
+        'estimated': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'a001_system_output_prob.csv')
+        )
+    }
+
+    vis = sed_vis.visualization.EventListVisualizer(
+        event_lists=event_lists,
+        event_list_order=['reference','estimated'], # 'full', 'estimated'],
         audio_signal=audio_container.data,
         sampling_rate=audio_container.fs,
         spec_cmap='jet',

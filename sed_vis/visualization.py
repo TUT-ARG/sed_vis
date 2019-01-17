@@ -530,23 +530,45 @@ class EventListVisualizer(object):
                     for event in self._event_lists[event_list_label]:
                         if event['event_label'] == label:
                             event_length = event['offset'] - event['onset']
-                            if event_list_count == 1:
-                                color = m.to_rgba(y + offset)
+
+                            if 'probability' in event:
+                                if event_list_count == 1:
+                                    color = m.to_rgba(x=y + offset, alpha=event['probability'])
+                                else:
+                                    color = m.to_rgba(x=event_list_id, alpha=event['probability'])
+
+                                rectangle = plt.Rectangle(
+                                    (event['onset'], event_y),
+                                    height=annotation_height,
+                                    width=event_length,
+                                    edgecolor='black',
+                                    facecolor=color,
+                                    linewidth=0,
+                                    picker=5
+                                )
+
                             else:
-                                color = m.to_rgba(event_list_id)
-                            rectangle = plt.Rectangle(
-                                (event['onset'], event_y),
-                                height=annotation_height,
-                                width=event_length,
-                                edgecolor='black',
-                                facecolor=color,
-                                linewidth=0,
-                                alpha=self.event_roll_item_opacity,
-                                picker=5
-                            )
+                                if event_list_count == 1:
+                                    color = m.to_rgba(x=y + offset)
+                                else:
+                                    color = m.to_rgba(x=event_list_id)
+
+                                rectangle = plt.Rectangle(
+                                    (event['onset'], event_y),
+                                    height=annotation_height,
+                                    width=event_length,
+                                    edgecolor='black',
+                                    facecolor=color,
+                                    linewidth=0,
+                                    alpha=self.event_roll_item_opacity,
+                                    picker=5
+                                )
+
 
                             plt.gca().add_patch(rectangle)
+
                 y += 1
+
             # grid line
             line = plt.Rectangle((0, y - 0.5),
                                  height=0.001,
