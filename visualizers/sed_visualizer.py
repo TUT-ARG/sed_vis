@@ -72,6 +72,16 @@ def process_arguments(argv):
                         action="store_true")
 
     parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
+    
+    parser.add_argument('-sp',
+                        dest='save_path',
+                        default=None,
+                        type=str,
+                        help="Save the figure at the given path without opening a figure window (useful for batch "
+                             "processing of the figures",
+                        action='store',
+                        required=False)
+    
     return vars(parser.parse_args(argv[1:]))
 
 
@@ -144,7 +154,12 @@ def main(argv):
     )
 
     vis.show()
-
+    
+    if parameters['save_path'] is not None:
+        vis.save(parameters['save_path'])
+    else:
+        vis.show()
+    
 
 if __name__ == "__main__":
     try:
