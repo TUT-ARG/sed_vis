@@ -152,8 +152,6 @@ def main(argv):
         minimum_event_gap=parameters['minimum_event_gap'],
         publication_mode=publication_mode
     )
-
-    vis.show()
     
     if parameters['save_path'] is not None:
         vis.save(parameters['save_path'])
