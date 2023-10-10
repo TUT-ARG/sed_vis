@@ -620,15 +620,16 @@ class EventListVisualizer(object):
                     span += 0.15
 
         if self.show_selector:
+            # TODO
             self.slider_time = SpanSelector(
                 ax=self.ax1,
                 onselect=self.on_select,
                 minspan=None,
                 direction='horizontal',
-                span_stays=True,
+                #span_stays=True,
                 useblit=self.use_blit,
                 onmove_callback=None,
-                rectprops=dict(alpha=0.15, facecolor=self.color)
+                #rectprops=dict(alpha=0.15, facecolor=self.color)
             )
 
         if not self.publication_mode:
@@ -873,7 +874,8 @@ class EventListVisualizer(object):
             init_func=self.event_roll_panel_play_indicator_init,
             interval=50,
             blit=self.use_blit,
-            repeat=False
+            repeat=False,
+            cache_frame_data=False
         )
 
         self.animation_selector_panel = animation.FuncAnimation(
@@ -882,7 +884,8 @@ class EventListVisualizer(object):
             init_func=self.selector_panel_play_indicator_init,
             interval=50,
             blit=self.use_blit,
-            repeat=False
+            repeat=False,
+            cache_frame_data=False
         )
 
         self.animation_highlight_panel = animation.FuncAnimation(
@@ -891,7 +894,8 @@ class EventListVisualizer(object):
             init_func=self.highlight_panel_play_indicator_init,
             interval=50,
             blit=self.use_blit,
-            repeat=False
+            repeat=False,
+            cache_frame_data=False
         )
 
         self.fig.canvas.draw()
