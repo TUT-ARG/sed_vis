@@ -18,6 +18,8 @@ import numpy
 import math
 import time
 import matplotlib
+import matplotlib.cm as cm
+import matplotlib.colors as colors
 
 class VideoGenerator(object):
     """Video generator
@@ -65,7 +67,7 @@ class VideoGenerator(object):
             for event_list_label in self._event_lists:
                 events += self._event_lists[event_list_label]
 
-            self.event_labels = sorted(events.unique_event_labels, reverse=True)
+            self.event_labels = sorted(events.unique_event_labels, reverse=False)
             self.event_label_count = events.event_label_count
 
             if kwargs.get('active_events') is None:
@@ -112,36 +114,82 @@ class VideoGenerator(object):
                     'height': 40
                 },
                 'top_y': 680,
-                'top_x': 0
+                'top_x': 0,
+                'color': (240, 240, 240)
             },
             'header': {
                 'size': {
-                    'height': 474
+                    'height': 350
                 },
                 'top_y': 0,
-                'top_x': 0
+                'top_x': 0,
+                'color': (240, 240, 240)
             },
             'video': {
+                'enable': True,
                 'size': {
                   'width': 400,
                   'height': 300
                 },
                 'top_y': 30,
-                'top_x': 10
+                'top_x': 10,
+                'color': (0, 0, 0),
+                'frame_color': (100,100,100)
             },
             'spectrogram': {
+                'enable': True,
                 'size': {
                     'width': 660,
                     'height': 300,
                 },
                 'top_y': 30,
-                'top_x': None
+                'top_x': None,
+                'color': (0, 0, 0),
+                'frame_color': (100,100,100)
+            },
+            'event_list': {
+                'enable': False,
+                'size': {
+                    'width': self.frame_width,
+                    'height': 300,
+                },
+                'top_y': 370,
+                'top_x': 0,
+                'color': (255, 255, 255),
+                'frame_color': None
+            },
+            'event_roll': {
+                'enable': True,
+                'size': {
+                    'width': self.frame_width,
+                    'height': 300,
+                },
+                'top_y': 370,
+                'top_x': 0,
+                'color': (255, 255, 255),
+                'frame_color': None
             }
         }
         self.panels['footer']['size']['width'] = self.frame_width
         self.panels['header']['size']['width'] = self.frame_width
 
-        self.panels['spectrogram']['top_x'] = self.panels['video']['size']['width'] + 50
+        if not self.panels['video']['enable'] and self.panels['spectrogram']['enable']:
+            self.panels['spectrogram']['size']['width'] = 1120
+            self.panels['spectrogram']['top_x'] = 10
+        else:
+            self.panels['spectrogram']['top_x'] = self.panels['video']['size']['width'] + 50
+
+        self.text_labels = {
+            'spectrogram': 'Audio spectrogram',
+            'video': 'Video stream',
+            'classes': None, #'Classes',
+            'classes_desc': None, #'active class indicated with black color',
+            'application_title': 'Sound Event Detection',
+            'application_desc': 'Description of the application'
+        }
+        self.header_color = (100, 100, 100)
+        self.label_colormap = cm.get_cmap(name=kwargs.get('event_roll_cmap', 'rainbow'))
+
         self.font = cv2.FONT_HERSHEY_SIMPLEX
 
         self.spectrogram_move = 10
@@ -243,6 +291,66 @@ class VideoGenerator(object):
         video_spectrogram_offset = int(self.spectrogram.shape[1]/2)
         self.spectrogram[:, video_spectrogram_offset:, :] = video_spectrogram[:, 0:video_spectrogram_offset, :]
 
+        if self.panels['event_roll']['enable']:
+            event_roll = numpy.zeros((self.panels['event_roll']['size']['width'], self.panels['event_roll']['size']['height'], 3), numpy.uint8)
+            event_roll.fill(255)
+
+            line_margin = 0.1
+            y = 0
+            event_list_count = len(self._event_lists)
+            annotation_height = (1.0-line_margin*2)/event_list_count
+
+            if event_list_count == 1:
+                norm = colors.Normalize(
+                    vmin=0,
+                    vmax=self.event_label_count
+                )
+            else:
+                norm = colors.Normalize(
+                    vmin=0,
+                    vmax=event_list_count
+                )
+            m = cm.ScalarMappable(
+                norm=norm,
+                cmap=self.label_colormap
+            )
+            embed()
+            for label in self.active_events:
+                for event_list_id, event_list_label in enumerate(self._event_list_order):
+                    offset = (len(self._event_list_order)-1-event_list_id) * annotation_height
+
+                    event_y = y - 0.5 + line_margin + offset
+
+                    # grid line
+                    for event in self._event_lists[event_list_label]:
+                        if event['event_label'] == label:
+                            event_length = event['offset'] - event['onset']
+
+                            if event_list_count == 1:
+                                color = m.to_rgba(y + offset)
+                            else:
+                                color = m.to_rgba(event_list_id)
+
+                            #rectangle = plt.Rectangle(
+                            #    (event['onset'], event_y),
+                            #    height=annotation_height,
+                            #    width=event_length,
+                            #    edgecolor='black',
+                            #    facecolor=color,
+                            #    linewidth=0,
+                            #    alpha=self.event_roll_item_opacity,
+                            #    picker=5
+                            #)
+                            event_roll = cv2.rectangle(
+                                img=event_roll,
+                                pt1=(event['onset'], event_y),
+                                pt2=(event['onset']+event_length, event_y+annotation_height),
+                                color=color,
+                                thickness=-1
+                            )
+
+
+
         while True:
             self.spectrogram = self.move_image(image_data=self.spectrogram, x=-self.spectrogram_move, y=0)
 
@@ -273,9 +381,10 @@ class VideoGenerator(object):
                 img=current_output_frame,
                 pt1=(self.panels['header']['top_x'], self.panels['header']['top_y'] - 1),
                 pt2=(self.panels['header']['top_x'] + self.panels['header']['size']['width'], self.panels['header']['top_y'] + self.panels['header']['size']['height']),
-                color=(240, 240, 240),
+                color=self.panels['header']['color'],
                 thickness=-1
             )
+
             #current_output_frame = cv2.rectangle(
             #    img=current_output_frame,
             #    pt1=(0, 0),
@@ -289,109 +398,289 @@ class VideoGenerator(object):
                 img=current_output_frame,
                 pt1=(self.panels['footer']['top_x'], self.panels['footer']['top_y'] - 1),
                 pt2=(self.panels['footer']['top_x'] + self.panels['footer']['size']['width'], self.panels['footer']['top_y'] + self.panels['footer']['size']['height']),
-                color=(240, 240, 240),
+                color=self.panels['footer']['color'],
                 thickness=-1
             )
 
-            # Video box
-            current_output_frame = cv2.rectangle(
-                img=current_output_frame,
-                pt1=(self.panels['video']['top_x'], self.panels['video']['top_y']),
-                pt2=(self.panels['video']['top_x'] + self.panels['video']['size']['width'], self.panels['video']['top_y'] + self.panels['video']['size']['height']),
-                color=(0, 0, 0),
-                thickness=-1
-            )
-            current_output_frame = cv2.rectangle(
-                img=current_output_frame,
-                pt1=(self.panels['video']['top_x'], self.panels['video']['top_y']),
-                pt2=(self.panels['video']['top_x'] + self.panels['video']['size']['width'], self.panels['video']['top_y'] + self.panels['video']['size']['height']),
-                color=(100, 100, 100),
-                thickness=3
-            )
-
-            # Spectrogram box
-            current_output_frame = cv2.rectangle(
-                img=current_output_frame,
-                pt1=(self.panels['spectrogram']['top_x'], self.panels['spectrogram']['top_y']),
-                pt2=(self.panels['spectrogram']['top_x'] + self.panels['spectrogram']['size']['width'], self.panels['spectrogram']['top_y'] + self.panels['spectrogram']['size']['height']),
-                color=(0, 0, 0),
-                thickness=-1
-            )
-            current_output_frame = cv2.rectangle(
-                img=current_output_frame,
-                pt1=(self.panels['spectrogram']['top_x'], self.panels['spectrogram']['top_y']),
-                pt2=(self.panels['spectrogram']['top_x'] + self.panels['spectrogram']['size']['width'], self.panels['spectrogram']['top_y'] + self.panels['spectrogram']['size']['height']),
-                color=(100, 100, 100),
-                thickness=3
-            )
-
-
-            if video_ret:
-                # Place video frame
-                offset_y = int((self.panels['video']['size']['height'] - video_frame.shape[0])/2)
-                offset_x = int((self.panels['video']['size']['width'] - video_frame.shape[1])/2)
-                self.place_image(
-                    target_image=current_output_frame,
-                    source_image=video_frame,
-                    x=offset_x + self.panels['video']['top_x'],
-                    y=offset_y + self.panels['video']['top_y']
+            if self.panels['video']['enable']:
+                # Video box
+                current_output_frame = cv2.rectangle(
+                    img=current_output_frame,
+                    pt1=(self.panels['video']['top_x'], self.panels['video']['top_y']),
+                    pt2=(self.panels['video']['top_x'] + self.panels['video']['size']['width'], self.panels['video']['top_y'] + self.panels['video']['size']['height']),
+                    color = self.panels['video']['color'],
+                    thickness=-1
                 )
-
-            # Place spectrogram
-            offset_y = int((self.panels['spectrogram']['size']['height'] - self.spectrogram.shape[0]) / 2)
-            offset_x = int((self.panels['spectrogram']['size']['width'] - self.spectrogram.shape[1]) / 2)
-            self.place_image(
-                target_image=current_output_frame,
-                source_image=self.spectrogram,
-                x=offset_x + self.panels['spectrogram']['top_x'],
-                y=offset_y + self.panels['spectrogram']['top_y']
-            )
-
-            freq_index = 0
-            tick_hz = 16000 / 4.0
-            for y in range(self.panels['spectrogram']['top_y'], self.panels['spectrogram']['top_y'] + self.spectrogram.shape[0] + 1, int(self.spectrogram.shape[0] / 4)):
+                if self.panels['video']['frame_color']:
+                    current_output_frame = cv2.rectangle(
+                        img=current_output_frame,
+                        pt1=(self.panels['video']['top_x'], self.panels['video']['top_y']),
+                        pt2=(self.panels['video']['top_x'] + self.panels['video']['size']['width'], self.panels['video']['top_y'] + self.panels['video']['size']['height']),
+                        color=self.panels['video']['frame_color'],
+                        thickness=3
+                    )
                 cv2.putText(
                     img=current_output_frame,
-                    text='{index:.0f}kHz'.format(index=(16000 - freq_index * tick_hz) / 1000),
-                    org=(self.panels['spectrogram']['top_x'] + self.spectrogram.shape[1] + 10, y + 4),
+                    text=self.text_labels['video'],
+                    org=(self.panels['video']['top_x'], self.panels['video']['top_y']-10),
+                    fontFace=self.font,
+                    fontScale=0.8,
+                    color=self.header_color,
+                    thickness=1,
+                    lineType=cv2.LINE_AA
+                )
+
+                if video_ret:
+                    # Place video frame
+                    offset_y = int((self.panels['video']['size']['height'] - video_frame.shape[0])/2)
+                    offset_x = int((self.panels['video']['size']['width'] - video_frame.shape[1])/2)
+                    self.place_image(
+                        target_image=current_output_frame,
+                        source_image=video_frame,
+                        x=offset_x + self.panels['video']['top_x'],
+                        y=offset_y + self.panels['video']['top_y']
+                    )
+
+            if self.panels['spectrogram']['enable']:
+                # Spectrogram box
+                current_output_frame = cv2.rectangle(
+                    img=current_output_frame,
+                    pt1=(self.panels['spectrogram']['top_x'], self.panels['spectrogram']['top_y']),
+                    pt2=(self.panels['spectrogram']['top_x'] + self.panels['spectrogram']['size']['width'],
+                         self.panels['spectrogram']['top_y'] + self.panels['spectrogram']['size']['height']),
+                    color=self.panels['spectrogram']['color'],
+                    thickness=-1
+                )
+                if self.panels['spectrogram']['frame_color']:
+                    current_output_frame = cv2.rectangle(
+                        img=current_output_frame,
+                        pt1=(self.panels['spectrogram']['top_x'], self.panels['spectrogram']['top_y']),
+                        pt2=(self.panels['spectrogram']['top_x'] + self.panels['spectrogram']['size']['width'],
+                             self.panels['spectrogram']['top_y'] + self.panels['spectrogram']['size']['height']),
+                        color=self.panels['spectrogram']['frame_color'],
+                        thickness=3
+                    )
+                cv2.putText(
+                    img=current_output_frame,
+                    text=self.text_labels['spectrogram'],
+                    org=(self.panels['spectrogram']['top_x'], self.panels['spectrogram']['top_y'] - 10),
+                    fontFace=self.font,
+                    fontScale=0.8,
+                    color=self.header_color,
+                    thickness=1,
+                    lineType=cv2.LINE_AA
+                )
+
+                # Place spectrogram
+                offset_y = int((self.panels['spectrogram']['size']['height'] - self.spectrogram.shape[0]) / 2)
+                offset_x = int((self.panels['spectrogram']['size']['width'] - self.spectrogram.shape[1]) / 2)
+                self.place_image(
+                    target_image=current_output_frame,
+                    source_image=self.spectrogram,
+                    x=offset_x + self.panels['spectrogram']['top_x'],
+                    y=offset_y + self.panels['spectrogram']['top_y']
+                )
+
+                freq_index = 0
+                tick_hz = 16000 / 4.0
+                for y in range(self.panels['spectrogram']['top_y'], self.panels['spectrogram']['top_y'] + self.spectrogram.shape[0] + 1, int(self.spectrogram.shape[0] / 4)):
+                    cv2.putText(
+                        img=current_output_frame,
+                        text='{index:.0f}kHz'.format(index=(16000 - freq_index * tick_hz) / 1000),
+                        org=(self.panels['spectrogram']['top_x'] + self.spectrogram.shape[1] + 10, y + 4),
+                        fontFace=self.font,
+                        fontScale=0.5,
+                        color=(100, 100, 100),
+                        thickness=1,
+                        lineType=cv2.LINE_AA
+                    )
+                    freq_index += 1
+
+                cv2.putText(
+                    img=current_output_frame,
+                    text='Frequency',
+                    org=(self.panels['spectrogram']['top_x'] + self.spectrogram.shape[1] + 55, self.panels['spectrogram']['top_y'] + 4 + int(self.spectrogram.shape[0] / 2)),
                     fontFace=self.font,
                     fontScale=0.5,
                     color=(100, 100, 100),
                     thickness=1,
                     lineType=cv2.LINE_AA
                 )
-                freq_index += 1
+                shade = numpy.zeros_like(current_output_frame, numpy.uint8)
 
-            cv2.putText(
-                img=current_output_frame,
-                text='Frequency',
-                org=(self.panels['spectrogram']['top_x'] + self.spectrogram.shape[1] + 55, self.panels['spectrogram']['top_y'] + 4 + int(self.spectrogram.shape[0] / 2)),
-                fontFace=self.font,
-                fontScale=0.5,
-                color=(100, 100, 100),
-                thickness=1,
-                lineType=cv2.LINE_AA
-            )
+                cv2.rectangle(
+                    img=shade,
+                    pt1=(
+                        self.panels['spectrogram']['top_x'] + int(self.panels['spectrogram']['size']['width'] / 2),
+                        self.panels['spectrogram']['top_y'] + 3
+                    ),
+                    pt2=(
+                        self.panels['spectrogram']['top_x'] + self.panels['spectrogram']['size']['width'] - 3,
+                        self.panels['spectrogram']['top_y'] + self.panels['spectrogram']['size']['height'] - 3
+                    ),
+                    color=(255, 255, 255),
+                    thickness=cv2.FILLED
+                )
+                mask = shade.astype(bool)
+                current_output_frame_shaded = current_output_frame.copy()
+                alpha = 0.5
+                current_output_frame_shaded[mask] = cv2.addWeighted(current_output_frame, alpha, shade, 1 - alpha, 0)[mask]
+                current_output_frame = current_output_frame_shaded
 
-            shade = numpy.zeros_like(current_output_frame, numpy.uint8)
+            if self.panels['event_list']['enable']:
+                # Labels
+                column_margin = 30
+                row_margin = 10
+                text_margin = 10
 
-            cv2.rectangle(
-                img=shade,
-                pt1=(
-                    self.panels['spectrogram']['top_x'] + int(self.panels['spectrogram']['size']['width']/2),
-                    self.panels['spectrogram']['top_y'] + 3
-                ),
-                pt2=(
-                    self.panels['spectrogram']['top_x'] + self.panels['spectrogram']['size']['width']-3,
-                    self.panels['spectrogram']['top_y'] + self.panels['spectrogram']['size']['height']-3
-                ),
-                color=(255, 255, 255),
-                thickness=cv2.FILLED
-            )
-            mask = shade.astype(bool)
-            current_output_frame_shaded = current_output_frame.copy()
-            alpha = 0.5
-            current_output_frame_shaded[mask] = cv2.addWeighted(current_output_frame, alpha, shade, 1 - alpha, 0)[mask]
+                current_output_frame = cv2.rectangle(
+                    img=current_output_frame,
+                    pt1=(self.panels['event_list']['top_x'], self.panels['event_list']['top_y']),
+                    pt2=(self.panels['event_list']['top_x'] + self.panels['event_list']['size']['width'], self.panels['event_list']['top_y'] + self.panels['event_list']['size']['height']),
+                    color=self.panels['event_list']['color'],
+                    thickness=-1
+                )
+                if self.panels['event_list']['frame_color']:
+                    current_output_frame = cv2.rectangle(
+                        img=current_output_frame,
+                        pt1=(self.panels['event_list']['top_x'], self.panels['event_list']['top_y']),
+                        pt2=(self.panels['event_list']['top_x'] + self.panels['event_list']['size']['width'],
+                             self.panels['event_list']['top_y'] + self.panels['event_list']['size']['height']),
+                        color=self.panels['event_list']['frame_color'],
+                        thickness=3
+                    )
+                current_panel_text_y = self.panels['event_list']['top_y'] + 10
+
+                if self.text_labels['application_title']:
+                    cv2.putText(
+                        img=current_output_frame,
+                        text=self.text_labels['application_title'],
+                        org=(self.panels['event_list']['top_x'] + text_margin, current_panel_text_y),
+                        fontFace=self.font,
+                        fontScale=1,
+                        color=(100, 100, 100),
+                        thickness=2,
+                        lineType=cv2.LINE_AA
+                    )
+                    (text_width, text_height), text_baseline = cv2.getTextSize(self.text_labels['application_title'], self.font, 1, 2)
+                    (text_width2, text_height2), text_baseline = cv2.getTextSize(self.text_labels['application_desc'], self.font, 0.5, 1)
+                    if self.text_labels['application_desc']:
+                        cv2.putText(
+                            img=current_output_frame,
+                            text=self.text_labels['application_desc'],
+                            org=(self.frame_width-text_width2 - text_margin, current_panel_text_y),
+                            fontFace=self.font,
+                            fontScale=0.5,
+                            color=(180, 180, 180),
+                            thickness=1,
+                            lineType=cv2.LINE_AA
+                        )
+
+                    current_panel_text_y += text_height + 10
+
+                if self.text_labels['classes']:
+                    cv2.putText(
+                        img=current_output_frame,
+                        text=self.text_labels['classes'],
+                        org=(self.panels['event_list']['top_x']+text_margin, current_panel_text_y),
+                        fontFace=self.font,
+                        fontScale=1,
+                        color=(100, 100, 100),
+                        thickness=1,
+                        lineType=cv2.LINE_AA
+                    )
+                    (text_width, text_height), text_baseline = cv2.getTextSize(self.text_labels['classes'], self.font, 1, 1)
+                    if self.text_labels['classes_desc']:
+                        cv2.putText(
+                            img=current_output_frame,
+                            text=self.text_labels['classes_desc'],
+                            org=(self.panels['event_list']['top_x']+text_margin*2+text_width, current_panel_text_y),
+                            fontFace=self.font,
+                            fontScale=0.5,
+                            color=(180, 180, 180),
+                            thickness=1,
+                            lineType=cv2.LINE_AA
+                        )
+                    current_panel_text_y += text_baseline + 5
+
+                column_width = 100
+                for col_id, event_list_label in enumerate(self._event_lists):
+                    (text_width, text_height), text_baseline = cv2.getTextSize(text=event_list_label, fontFace=self.font, fontScale=1, thickness=2)
+                    if column_width < text_width:
+                        column_width = text_width
+                    for event_label_id, event_label in enumerate(self.event_labels):
+                        (text_width, text_height), text_baseline = cv2.getTextSize(text=event_label, fontFace=self.font, fontScale=0.8, thickness=1)
+                        if column_width < text_width:
+                            column_width = text_width
+
+                for col_id, event_list_label in enumerate(self._event_lists):
+                    current_text_y = current_panel_text_y + 30
+                    if col_id > 0:
+                        cv2.line(
+                            img=current_output_frame,
+                            pt1=(text_margin + self.panels['event_list']['top_x'] + col_id*(column_width + column_margin) - int(column_margin/2), current_text_y ),
+                            pt2=(text_margin + self.panels['event_list']['top_x'] + col_id*(column_width + column_margin) - int(column_margin/2), self.panels['event_list']['top_y'] + self.panels['event_list']['size']['height'] ),
+                            color=(200, 200, 200),
+                            thickness=1
+                        )
+
+                    current_active_events = self._event_lists[event_list_label].filter_time_segment(
+                        start=frame_time,
+                        stop=frame_time + self.frame_duration).unique_event_labels
+
+                    # Event group title
+                    cv2.putText(
+                        img=current_output_frame,
+                        text=event_list_label,
+                        org=(text_margin*2 + self.panels['event_list']['top_x'] + col_id*(column_width + column_margin),
+                             current_text_y),
+                        fontFace=self.font,
+                        fontScale=0.6,
+                        color=(100, 100, 100),
+                        thickness=2,
+                        lineType=cv2.LINE_AA
+                    )
+                    cv2.line(
+                        img=current_output_frame,
+                        pt1=(0, current_text_y+int(row_margin/2)),
+                        pt2=(self.frame_width, current_text_y+int(row_margin/2)),
+                        color=(200, 200, 200),
+                        thickness=1
+                    )
+
+                    (text_width, text_height), text_baseline = cv2.getTextSize(event_list_label, self.font, 0.6, 2)
+                    current_text_y += text_height + row_margin * 2
+
+                    for event_label_id, event_label in enumerate(self.event_labels):
+                        if event_label in current_active_events:
+                            cv2.putText(
+                                img=current_output_frame,
+                                text=event_label,
+                                org=(text_margin*2 + self.panels['event_list']['top_x'] + col_id * (column_width + column_margin),
+                                     current_text_y),
+                                fontFace=self.font,
+                                fontScale=0.8,
+                                color=(0, 0, 0),
+                                thickness=1,
+                                lineType=cv2.LINE_AA
+                            )
+                        else:
+                            cv2.putText(
+                                img=current_output_frame,
+                                text=event_label,
+                                org=(text_margin*2 + self.panels['event_list']['top_x'] + col_id * (column_width + column_margin),
+                                     current_text_y),
+                                fontFace=self.font,
+                                fontScale=0.8,
+                                color=(220, 220, 220),
+                                thickness=1,
+                                lineType=cv2.LINE_AA
+                            )
+                        (text_width, text_height), text_baseline = cv2.getTextSize(event_label, self.font, 1, 1)
+                        current_text_y += text_height + row_margin
+
+            if self.panels['event_roll']['enable']:
+                pass
 
             # Wait for keypress
             k = cv2.waitKey(10)
@@ -401,10 +690,10 @@ class VideoGenerator(object):
                 break
 
             # Display the image
-            cv2.imshow('output', current_output_frame_shaded)
+            cv2.imshow('output', current_output_frame)
 
             # Write the frame
-            self.output.write(current_output_frame_shaded)
+            self.output.write(current_output_frame)
 
             frame_index += 1
             frame_time += self.frame_duration
