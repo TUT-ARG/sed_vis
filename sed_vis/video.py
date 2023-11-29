@@ -127,6 +127,7 @@ class VideoGenerator(object):
             },
             'video': {
                 'enable': True,
+                'position': 'top_right', # top_left, top_right
                 'size': {
                   'width': 400,
                   'height': 300
@@ -147,11 +148,22 @@ class VideoGenerator(object):
                 'color': (0, 0, 0),
                 'frame_color': (100,100,100)
             },
-            'event_list': {
-                'enable': False,
+            'mid_header': {
+                'enable': True,
                 'size': {
                     'width': self.frame_width,
-                    'height': 300,
+                    'height': 15,
+                },
+                'top_y': 368,
+                'top_x': 0,
+                'color': (255, 255, 255),
+                'frame_color': None
+            },
+            'event_list': {
+                'enable': True,
+                'size': {
+                    'width': self.frame_width,
+                    'height': 370,
                 },
                 'top_y': 370,
                 'top_x': 0,
@@ -170,6 +182,11 @@ class VideoGenerator(object):
                 'frame_color': (100,100,100)
             }
         }
+        if self.panels['video']['position'] == 'top_left':
+            pass
+        elif self.panels['video']['position'] == 'top_right':
+            pass
+
         self.panels['footer']['size']['width'] = self.frame_width
         self.panels['header']['size']['width'] = self.frame_width
 
@@ -177,8 +194,30 @@ class VideoGenerator(object):
             self.panels['spectrogram']['size']['width'] = 1120
             self.panels['spectrogram']['top_x'] = 10
         else:
-            self.panels['spectrogram']['top_x'] = self.panels['video']['size']['width'] + 50
-            self.panels['event_roll']['top_x'] = self.panels['video']['size']['width'] + 50
+            if self.panels['video']['position'] == 'top_left':
+                self.panels['spectrogram']['top_x'] = self.panels['video']['size']['width'] + 50
+            elif self.panels['video']['position'] == 'top_right':
+                self.panels['spectrogram']['top_x'] = 10
+                self.panels['video']['top_x'] = self.panels['spectrogram']['size']['width'] + 200
+
+        if self.panels['mid_header']['enable']:
+            self.panels['event_roll']['top_y'] = self.panels['mid_header']['top_y'] + self.panels['mid_header']['size']['height']
+            self.panels['event_list']['top_y'] = self.panels['mid_header']['top_y'] + self.panels['mid_header']['size']['height']
+        self.panels['event_roll']['size']['height'] = self.panels['footer']['top_y'] - self.panels['event_roll']['top_y'] -3
+        self.panels['event_list']['size']['height'] = self.panels['footer']['top_y'] - self.panels['event_list']['top_y'] - 3
+
+        if not self.panels['video']['enable'] and self.panels['event_roll']['enable']:
+            self.panels['event_roll']['size']['width'] = 1120
+            self.panels['event_roll']['top_x'] = 10
+        else:
+            if self.panels['video']['position'] == 'top_left':
+                self.panels['event_roll']['top_x'] = self.panels['video']['size']['width'] + 50
+            elif self.panels['video']['position'] == 'top_right':
+                self.panels['event_roll']['top_x'] = 10
+
+        if self.panels['event_roll']['enable'] and self.panels['event_list']['enable']:
+            self.panels['event_list']['top_x'] = self.panels['event_roll']['size']['width'] + 50
+            self.panels['event_list']['size']['width'] = self.frame_width - (self.panels['event_roll']['size']['width'] + 50)
 
         self.text_labels = {
             'spectrogram': 'Audio spectrogram',
@@ -298,9 +337,52 @@ class VideoGenerator(object):
         video_spectrogram_offset = int(self.spectrogram.shape[1]/2)
         self.spectrogram[:, video_spectrogram_offset:, :] = video_spectrogram[:, 0:video_spectrogram_offset, :]
 
+        event_list_colors = {}
+        if self.panels['event_list']['enable'] or self.panels['event_roll']['enable']:
+            line_margin = 0.1
+            annotation_height = (1.0 - line_margin * 2) / len(self._event_lists)
+
+            if len(self._event_lists) == 1:
+                norm = colors.Normalize(
+                    vmin=0,
+                    vmax=self.event_label_count
+                )
+            else:
+                norm = colors.Normalize(
+                    vmin=0,
+                    vmax=len(self._event_lists)
+                )
+            m = cm.ScalarMappable(
+                norm=norm,
+                cmap=self.label_colormap
+            )
+            for event_list_id, event_list_label in enumerate(self._event_list_order):
+                if event_list_label not in event_list_colors:
+                    offset = (len(self._event_list_order) - 1 - event_list_id) * annotation_height
+
+                    if len(self._event_lists) == 1:
+                        color = m.to_rgba(offset)
+                    else:
+                        color = m.to_rgba(event_list_id)
+                    color = (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
+                    event_list_colors[event_list_label] = color
+
         if self.panels['event_roll']['enable']:
-            video_event_roll = numpy.zeros((self.panels['event_list']['size']['height']-6, int(self.audio_data.duration_sec*1000), 3), numpy.uint8)
+            #(self.frame_count * self.event_roll_move) / self.audio_data.duration_sec
+            #embed()
+            time_axis_multiplier = 1000
+            video_event_roll = numpy.zeros((self.panels['event_roll']['size']['height']-6, (self.frame_count * self.event_roll_move), 3), numpy.uint8)
             video_event_roll.fill(255)
+
+            for grid_x in range(0, (self.frame_count * self.event_roll_move), int(1.0*(self.frame_count * self.event_roll_move) / self.audio_data.duration_sec)):
+                for dot in range(0, self.panels['event_roll']['size']['height']-6, 5):
+                    cv2.line(
+                        img=video_event_roll,
+                        pt1=(grid_x, dot),
+                        pt2=(grid_x, dot+1),
+                        color=(150, 150, 150),
+                        thickness=1
+                    )
 
             line_margin = 0.1
             y = 0
@@ -326,39 +408,38 @@ class VideoGenerator(object):
                 norm=norm,
                 cmap=self.label_colormap
             )
-
+            event_list_colors = {}
             for label in self.active_events:
                 for event_list_id, event_list_label in enumerate(self._event_list_order):
                     offset = (len(self._event_list_order)-1-event_list_id) * annotation_height
 
-                    event_y1 = y + (event_list_id * (sublane_height+sublane_margin)) #int((y - 0.5 + line_margin + offset)* 10)
-                    event_y2 = y + (event_list_id * (sublane_height+sublane_margin)) + sublane_height #label_lane_height #int((y - 0.5 + line_margin + offset + annotation_height) * 10 )
+                    event_y1 = y + (event_list_id * (sublane_height+sublane_margin))
+                    event_y2 = y + (event_list_id * (sublane_height+sublane_margin)) + sublane_height
+                    if event_list_label not in event_list_colors:
+                        if event_list_count == 1:
+                            color = m.to_rgba(y + offset)
+                        else:
+                            color = m.to_rgba(event_list_id)
+                        color = (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
+                        event_list_colors[event_list_label] = color
 
-                    # grid line
                     for event in self._event_lists[event_list_label]:
                         if event['event_label'] == label:
-                            event_length = event['offset'] - event['onset']
-
-                            if event_list_count == 1:
-                                color = m.to_rgba(y + offset)
-                            else:
-                                color = m.to_rgba(event_list_id)
-                            color = (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
-
                             video_event_roll = cv2.rectangle(
                                 img=video_event_roll,
-                                pt1=(int(event['onset']*1000), event_y1),
-                                pt2=(int(event['onset']*1000) + int(event_length*1000), event_y2),
-                                color=color,
+                                pt1=(int(event['onset']*(self.frame_count * self.event_roll_move) / self.audio_data.duration_sec), event_y1),
+                                pt2=(int(event['offset']*(self.frame_count * self.event_roll_move) / self.audio_data.duration_sec), event_y2),
+                                color=event_list_colors[event_list_label],
                                 thickness=-1
                             )
 
                 y += label_lane_height
-            video_event_roll = cv2.resize(
-                src=video_event_roll,
-                dsize=(self.frame_count*self.event_roll_move, self.panels['event_roll']['size']['height'] - 6),
-                interpolation=cv2.INTER_AREA
-            )
+
+            #video_event_roll = cv2.resize(
+            #    src=video_event_roll,
+            #    dsize=(self.frame_count*self.event_roll_move, self.panels['event_roll']['size']['height'] - 6),
+            #    interpolation=cv2.INTER_NEAREST #INTER_AREA
+            #)
 
             video_event_roll_offset = int(self.event_roll.shape[1] / 2)
             self.event_roll[:, video_event_roll_offset:, :] = video_event_roll[:, 0:video_event_roll_offset, :]
@@ -540,35 +621,14 @@ class VideoGenerator(object):
                 current_output_frame_shaded[mask] = cv2.addWeighted(current_output_frame, alpha, shade, 1 - alpha, 0)[mask]
                 current_output_frame = current_output_frame_shaded
 
-            if self.panels['event_list']['enable']:
-                # Labels
-                column_margin = 30
-                row_margin = 10
+            if self.panels['mid_header']['enable']:
+                current_panel_text_y = self.panels['mid_header']['top_y'] + 10
                 text_margin = 10
-
-                current_output_frame = cv2.rectangle(
-                    img=current_output_frame,
-                    pt1=(self.panels['event_list']['top_x'], self.panels['event_list']['top_y']),
-                    pt2=(self.panels['event_list']['top_x'] + self.panels['event_list']['size']['width'], self.panels['event_list']['top_y'] + self.panels['event_list']['size']['height']),
-                    color=self.panels['event_list']['color'],
-                    thickness=-1
-                )
-                if self.panels['event_list']['frame_color']:
-                    current_output_frame = cv2.rectangle(
-                        img=current_output_frame,
-                        pt1=(self.panels['event_list']['top_x'], self.panels['event_list']['top_y']),
-                        pt2=(self.panels['event_list']['top_x'] + self.panels['event_list']['size']['width'],
-                             self.panels['event_list']['top_y'] + self.panels['event_list']['size']['height']),
-                        color=self.panels['event_list']['frame_color'],
-                        thickness=3
-                    )
-                current_panel_text_y = self.panels['event_list']['top_y'] + 10
-
                 if self.text_labels['application_title']:
                     cv2.putText(
                         img=current_output_frame,
                         text=self.text_labels['application_title'],
-                        org=(self.panels['event_list']['top_x'] + text_margin, current_panel_text_y),
+                        org=(self.panels['mid_header']['top_x'] + text_margin, current_panel_text_y),
                         fontFace=self.font,
                         fontScale=1,
                         color=(100, 100, 100),
@@ -590,6 +650,44 @@ class VideoGenerator(object):
                         )
 
                     current_panel_text_y += text_height + 10
+
+            if self.panels['event_list']['enable']:
+                current_panel_text_y = self.panels['event_list']['top_y']
+
+                # Labels
+                column_margin = 10
+                column_width = 50
+                event_set_font_scale=0.6
+                event_label_font_scale=0.5
+
+                for col_id, event_list_label in enumerate(self._event_lists):
+                    (text_width, text_height), text_baseline = cv2.getTextSize(text=event_list_label, fontFace=self.font, fontScale=event_set_font_scale, thickness=2)
+                    if column_width < text_width:
+                        column_width = text_width
+                    for event_label_id, event_label in enumerate(self.event_labels):
+                        (text_width, text_height), text_baseline = cv2.getTextSize(text=event_label, fontFace=self.font, fontScale=event_label_font_scale, thickness=1)
+                        if column_width < text_width:
+                            column_width = text_width
+
+                row_margin = 2
+                text_margin = 5
+
+                current_output_frame = cv2.rectangle(
+                    img=current_output_frame,
+                    pt1=(self.panels['event_list']['top_x'], self.panels['event_list']['top_y']),
+                    pt2=(self.panels['event_list']['top_x'] + self.panels['event_list']['size']['width'], self.panels['event_list']['top_y'] + self.panels['event_list']['size']['height']),
+                    color=self.panels['event_list']['color'],
+                    thickness=-1
+                )
+                if self.panels['event_list']['frame_color']:
+                    current_output_frame = cv2.rectangle(
+                        img=current_output_frame,
+                        pt1=(self.panels['event_list']['top_x'], self.panels['event_list']['top_y']),
+                        pt2=(self.panels['event_list']['top_x'] + self.panels['event_list']['size']['width'],
+                             self.panels['event_list']['top_y'] + self.panels['event_list']['size']['height']),
+                        color=self.panels['event_list']['frame_color'],
+                        thickness=3
+                    )
 
                 if self.text_labels['classes']:
                     cv2.putText(
@@ -616,30 +714,14 @@ class VideoGenerator(object):
                         )
                     current_panel_text_y += text_baseline + 5
 
-                column_width = 100
-                for col_id, event_list_label in enumerate(self._event_lists):
-                    (text_width, text_height), text_baseline = cv2.getTextSize(text=event_list_label, fontFace=self.font, fontScale=1, thickness=2)
-                    if column_width < text_width:
-                        column_width = text_width
-                    for event_label_id, event_label in enumerate(self.event_labels):
-                        (text_width, text_height), text_baseline = cv2.getTextSize(text=event_label, fontFace=self.font, fontScale=0.8, thickness=1)
-                        if column_width < text_width:
-                            column_width = text_width
 
                 for col_id, event_list_label in enumerate(self._event_lists):
-                    current_text_y = current_panel_text_y + 30
-                    if col_id > 0:
-                        cv2.line(
-                            img=current_output_frame,
-                            pt1=(text_margin + self.panels['event_list']['top_x'] + col_id*(column_width + column_margin) - int(column_margin/2), current_text_y ),
-                            pt2=(text_margin + self.panels['event_list']['top_x'] + col_id*(column_width + column_margin) - int(column_margin/2), self.panels['event_list']['top_y'] + self.panels['event_list']['size']['height'] ),
-                            color=(200, 200, 200),
-                            thickness=1
-                        )
+                    current_text_y = current_panel_text_y + 15
 
                     current_active_events = self._event_lists[event_list_label].filter_time_segment(
                         start=frame_time,
-                        stop=frame_time + self.frame_duration).unique_event_labels
+                        stop=frame_time + self.frame_duration
+                    ).unique_event_labels
 
                     # Event group title
                     cv2.putText(
@@ -648,21 +730,31 @@ class VideoGenerator(object):
                         org=(text_margin*2 + self.panels['event_list']['top_x'] + col_id*(column_width + column_margin),
                              current_text_y),
                         fontFace=self.font,
-                        fontScale=0.6,
+                        fontScale=event_set_font_scale,
                         color=(100, 100, 100),
                         thickness=2,
                         lineType=cv2.LINE_AA
                     )
+                    (text_width, text_height), text_baseline = cv2.getTextSize(self.text_labels['classes'], self.font, event_set_font_scale, 2)
                     cv2.line(
                         img=current_output_frame,
-                        pt1=(0, current_text_y+int(row_margin/2)),
-                        pt2=(self.frame_width, current_text_y+int(row_margin/2)),
+                        pt1=(self.panels['event_list']['top_x'], current_text_y+int(text_baseline)),
+                        pt2=(self.panels['event_list']['top_x'] + self.panels['event_list']['size']['width'], current_text_y+int(text_baseline)),
                         color=(200, 200, 200),
                         thickness=1
                     )
+                    current_text_y += text_baseline
 
-                    (text_width, text_height), text_baseline = cv2.getTextSize(event_list_label, self.font, 0.6, 2)
-                    current_text_y += text_height + row_margin * 2
+                    if col_id > 0:
+                        cv2.line(
+                            img=current_output_frame,
+                            pt1=(text_margin + self.panels['event_list']['top_x'] + col_id*(column_width + column_margin) - int(column_margin/2), current_text_y ),
+                            pt2=(text_margin + self.panels['event_list']['top_x'] + col_id*(column_width + column_margin) - int(column_margin/2), self.panels['event_list']['top_y'] + self.panels['event_list']['size']['height'] ),
+                            color=(200, 200, 200),
+                            thickness=1
+                        )
+                    (text_width, text_height), text_baseline = cv2.getTextSize(self.event_labels[0], self.font, 1, 1)
+                    current_text_y += text_baseline + row_margin * 3
 
                     for event_label_id, event_label in enumerate(self.event_labels):
                         if event_label in current_active_events:
@@ -672,7 +764,7 @@ class VideoGenerator(object):
                                 org=(text_margin*2 + self.panels['event_list']['top_x'] + col_id * (column_width + column_margin),
                                      current_text_y),
                                 fontFace=self.font,
-                                fontScale=0.8,
+                                fontScale=event_label_font_scale,
                                 color=(0, 0, 0),
                                 thickness=1,
                                 lineType=cv2.LINE_AA
@@ -684,7 +776,7 @@ class VideoGenerator(object):
                                 org=(text_margin*2 + self.panels['event_list']['top_x'] + col_id * (column_width + column_margin),
                                      current_text_y),
                                 fontFace=self.font,
-                                fontScale=0.8,
+                                fontScale=event_label_font_scale,
                                 color=(220, 220, 220),
                                 thickness=1,
                                 lineType=cv2.LINE_AA
@@ -693,6 +785,8 @@ class VideoGenerator(object):
                         current_text_y += text_height + row_margin
 
             if self.panels['event_roll']['enable']:
+                current_panel_text_y = self.panels['event_roll']['top_y']+3
+
                 self.event_roll = self.move_image(image_data=self.event_roll, x=-self.event_roll_move, y=0)
 
                 event_roll_slice_start = video_event_roll_offset + frame_index * self.event_roll_move
@@ -725,7 +819,7 @@ class VideoGenerator(object):
                         thickness=3
                     )
 
-                # Place spectrogram
+                # Place event roll
                 offset_y = int((self.panels['event_roll']['size']['height'] - self.event_roll.shape[0]) / 2)
                 offset_x = int((self.panels['event_roll']['size']['width'] - self.event_roll.shape[1]) / 2)
                 self.place_image(
@@ -734,6 +828,28 @@ class VideoGenerator(object):
                     x=offset_x + self.panels['event_roll']['top_x'],
                     y=offset_y + self.panels['event_roll']['top_y']
                 )
+                column_margin = 1
+                column_width = 30
+                current_text_y = current_panel_text_y + 30
+                text_margin = 10
+                col_id = 0
+
+                #for event_list_id, event_list_label in enumerate(self._event_list_order):
+                #    cv2.putText(
+                #        img=current_output_frame,
+                #        text=event_list_label,
+                #        org=(self.panels['event_roll']['top_x'],
+                #             current_text_y),
+                #        fontFace=self.font,
+                #        fontScale=0.6,
+                #        color=(100, 100, 100),
+                #        thickness=2,
+                #        lineType=cv2.LINE_AA
+                #    )
+                #    col_id += 1
+                #    current_text_y += label_lane_height
+
+
                 shade = numpy.zeros_like(current_output_frame, numpy.uint8)
 
                 cv2.rectangle(
@@ -754,7 +870,42 @@ class VideoGenerator(object):
                 alpha = 0.5
                 current_output_frame_shaded[mask] = cv2.addWeighted(current_output_frame, alpha, shade, 1 - alpha, 0)[mask]
                 current_output_frame = current_output_frame_shaded
+                current_active_events = []
+                for col_id, event_list_label in enumerate(self._event_lists):
+                    current_active_events += self._event_lists[event_list_label].filter_time_segment(
+                        start=frame_time,
+                        stop=frame_time + self.frame_duration
+                    ).unique_event_labels
 
+                current_text_y = current_panel_text_y + int(label_lane_height / 2)+6
+                for event_label in self.active_events:
+                    if event_label in current_active_events:
+                        cv2.putText(
+                            img=current_output_frame,
+                            text=event_label,
+                            org=(self.panels['event_roll']['top_x'] + int(self.panels['event_roll']['size']['width'] / 2),
+                                 current_text_y),
+                            fontFace=self.font,
+                            fontScale=0.8,
+                            color=(50, 50, 50),
+                            thickness=2,
+                            lineType=cv2.LINE_AA
+                        )
+                    else:
+                        cv2.putText(
+                            img=current_output_frame,
+                            text=event_label,
+                            org=(self.panels['event_roll']['top_x'] + int(self.panels['event_roll']['size']['width'] / 2),
+                                 current_text_y),
+                            fontFace=self.font,
+                            fontScale=0.8,
+                            color=(220, 220, 220),
+                            thickness=2,
+                            lineType=cv2.LINE_AA
+                        )
+
+                    col_id += 1
+                    current_text_y += label_lane_height
 
             # Wait for keypress
             k = cv2.waitKey(10)
