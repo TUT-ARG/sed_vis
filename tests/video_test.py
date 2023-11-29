@@ -12,10 +12,10 @@ event_lists = {
         os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
     ),
     'Baseline': dcase_util.containers.MetaDataContainer().load(
-        os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
+        os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys1.ann')
     ),
     'Proposed system': dcase_util.containers.MetaDataContainer().load(
-        os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
+        os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys2.ann')
     )
 }
 
