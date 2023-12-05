@@ -14,7 +14,7 @@ event_lists = {
     'Baseline': dcase_util.containers.MetaDataContainer().load(
         os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys1.ann')
     ),
-    'Proposed system': dcase_util.containers.MetaDataContainer().load(
+    'Proposed': dcase_util.containers.MetaDataContainer().load(
         os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys2.ann')
     )
 }
@@ -23,8 +23,17 @@ generator = sed_vis.video.VideoGenerator(
     source_video=video_file,
     target_video=os.path.join('data', 'street_traffic-london-271-8243.output.mp4'),
     event_lists=event_lists,
-    event_list_order=['Reference', 'Baseline', 'Proposed system'],
+    event_list_order=['Reference', 'Baseline', 'Proposed'],
 
     title='Test video',
     intro_text='This is a test video generation.',
+    logos={
+        'left': os.path.join(current_path,'logo.png'),
+        'right': os.path.join(current_path,'logo.png')
+    },
+    layout=[
+        ['video', 'spectrogram'],
+        ['event_list', 'event_roll'],
+        ['footer']
+    ]
 ).generate()
