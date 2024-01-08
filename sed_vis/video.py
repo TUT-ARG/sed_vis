@@ -85,32 +85,39 @@ class VideoGenerator(object):
 
         else:
             self._event_lists = None
-        #from IPython import embed
+
+        from IPython import embed
         #embed()
-        self.source_video = kwargs.get('source_video', None)
-        self.target_video = kwargs.get('target_video', None)
-        #file_parts = os.path.split(self.target_video)
-        #file_parts2 = os.path.splitext(file_parts[-1])
-        #file_parts2[-1] = '.test'+file_parts2[-1]
+
+        self.source = kwargs.get('source', None)
+        self.target_video = kwargs.get('target', None)
 
         self.target_video_final = kwargs.get('target_video', None)
 
         self.title = kwargs.get('title', None)
         self.intro_text = kwargs.get('intro_text', None)
 
-        self.video_data = cv2.VideoCapture(filename=self.source_video)
+        self.video_data = cv2.VideoCapture(filename=self.source)
 
-        self.audio_data = dcase_util.containers.AudioContainer().load(filename=self.source_video, mono=True, fs=16000)
-        self.audio_info = dcase_util.utils.get_audio_info(filename=self.source_video)
+        self.audio_data = dcase_util.containers.AudioContainer().load(filename=self.source, mono=True, fs=16000)
+        self.audio_info = dcase_util.utils.get_audio_info(filename=self.source)
         self.fs = self.audio_data.fs
 
         self.frame_width = kwargs.get('frame_width', 1280)
         self.frame_height = kwargs.get('frame_height', 720)
 
-        self.fps = self.video_data.get(cv2.CAP_PROP_FPS)
-        self.frame_duration = 1.0 / self.fps
-        self.frame_count = int(self.video_data.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.duration = self.frame_count / self.fps
+        if self.video_data.isOpened():
+            self.fps = self.video_data.get(cv2.CAP_PROP_FPS)
+            self.frame_duration = 1.0 / self.fps
+            self.frame_count = int(self.video_data.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.duration = self.frame_count / self.fps
+            self.audio_only = False
+        else:
+            self.fps = 29.97
+            self.frame_duration = 1.0 / self.fps
+            self.duration = self.audio_data.duration_sec
+            self.frame_count = int(self.duration / self.frame_duration)
+            self.audio_only = True
 
         fourcc = cv2.VideoWriter_fourcc('m','p','4','v')
         self.output = cv2.VideoWriter(self.target_video, fourcc,  self.fps, (self.frame_width, self.frame_height))
@@ -122,7 +129,7 @@ class VideoGenerator(object):
                 'header': None,
                 'size': {
                     'height': 50,
-                    'width': None,
+                    'width': self.frame_width,
                 },
                 'top_y': 0,
                 'top_x': 0,
@@ -130,7 +137,7 @@ class VideoGenerator(object):
             },
             'footer': {
                 'enable': False,
-                'header': 'Sound Event Detection',
+                'header': None,
                 'size': {
                     'height': 50,
                     'width': self.frame_width,
@@ -141,7 +148,7 @@ class VideoGenerator(object):
             },
             'video': {
                 'enable': False,
-                'header': 'Video stream',
+                'header': None,
                 'size': {
                   'width': 480,
                   'height': 300
@@ -153,7 +160,7 @@ class VideoGenerator(object):
             },
             'spectrogram': {
                 'enable': False,
-                'header': 'Spectrogram',
+                'header': None,
                 'size': {
                     'width': 762,
                     'height': 300,
@@ -184,7 +191,7 @@ class VideoGenerator(object):
             },
             'event_list': {
                 'enable': False,
-                'header': 'Events',
+                'header': None,
                 'size': {
                     'width': 0,
                     'height': 0,
@@ -196,7 +203,7 @@ class VideoGenerator(object):
             },
             'event_roll': {
                 'enable': False,
-                'header': 'Events',
+                'header': None,
                 'size': {
                     'width': 762,
                     'height': 0,
@@ -225,6 +232,32 @@ class VideoGenerator(object):
             }
         }
         self.panels['video_dummy']['size']['width'] = self.panels['video']['size']['width']
+        self.text = kwargs.get('text', {
+            'header': None,
+            'footer': None,
+            'video': 'Video stream',
+            'spectrogram': 'Spectrogram',
+            'mid_header': {
+                'header': 'Sound Event Detection',
+                'description': 'Description of the application'
+            },
+            'event_list': 'Events',
+            'event_roll': 'Events',
+            'video_dummy': None
+        })
+
+        for panel_id in self.panels:
+            if panel_id in self.text and self.text[panel_id]:
+                if 'header' not in self.text[panel_id]:
+                    self.panels[panel_id]['header'] = self.text[panel_id]
+                else:
+                    self.panels[panel_id]['header'] = self.text[panel_id]['header']
+
+                if 'description' in self.text[panel_id]:
+                    self.panels[panel_id]['description'] = self.text[panel_id]['description']
+
+            else:
+                self.panels[panel_id]['header'] = None
 
         self.layout = kwargs.get('layout',
             [
@@ -249,9 +282,6 @@ class VideoGenerator(object):
             }
         }
 
-        from IPython import embed
-        #embed()
-
         self.ui.row('row', 'col', 'panel', 'x', 'y', 'height', 'width',  indent=4)
         self.ui.row_sep()
 
@@ -261,6 +291,7 @@ class VideoGenerator(object):
                 align_tmp.append(row.index('event_roll'))
             if 'spectrogram' in row:
                 align_tmp.append(row.index('spectrogram'))
+
         # Align spectrogram and event_roll
         if len(set(align_tmp)) == 1:
             for row_id, row in enumerate(self.layout):
@@ -299,7 +330,7 @@ class VideoGenerator(object):
 
             for col_id, col in enumerate(row):
                 self.panels[col]['enable'] = True
-                if col != 'footer':
+                if col != 'footer' and col != 'header':
                     self.panels[col]['top_x'] = current_x
                     self.panels[col]['top_y'] = current_y
                     self.panels[col]['size']['height'] = current_row_height
@@ -342,65 +373,23 @@ class VideoGenerator(object):
             current_y += current_row_height + self.margin['layout']['row']
             self.ui.row_sep()
 
-        if 0:
-            if self.panels['video']['position'] == 'top_left':
-                pass
-            elif self.panels['video']['position'] == 'top_right':
-                pass
-
-            self.panels['footer']['size']['width'] = self.frame_width
-            self.panels['header']['size']['width'] = self.frame_width
-
-            if not self.panels['video']['enable'] and self.panels['spectrogram']['enable']:
-                self.panels['spectrogram']['size']['width'] = self.frame_width - 160
-                self.panels['spectrogram']['top_x'] = 10
-            else:
-                if self.panels['video']['position'] == 'top_left':
-                    self.panels['spectrogram']['top_x'] = self.panels['video']['size']['width'] + 50
-                elif self.panels['video']['position'] == 'top_right':
-                    self.panels['spectrogram']['top_x'] = 10
-                    self.panels['video']['top_x'] = self.panels['spectrogram']['size']['width'] + 200
-
-            if self.panels['mid_header']['enable']:
-                self.panels['event_roll']['top_y'] = self.panels['mid_header']['top_y'] + self.panels['mid_header']['size']['height']
-                self.panels['event_list']['top_y'] = self.panels['mid_header']['top_y'] + self.panels['mid_header']['size']['height']
-            self.panels['event_roll']['size']['height'] = self.panels['footer']['top_y'] - self.panels['event_roll']['top_y'] -3
-            self.panels['event_list']['size']['height'] = self.panels['footer']['top_y'] - self.panels['event_list']['top_y'] - 3
-
-            if not self.panels['video']['enable'] and self.panels['event_roll']['enable']:
-                self.panels['event_roll']['size']['width'] = 1120
-                self.panels['event_roll']['top_x'] = 10
-
-            elif not self.panels['video']['enable'] and self.panels['event_roll']['enable'] and self.panels['event_list']['enable']:
-                pass
-            else:
-                if self.panels['video']['position'] == 'top_left':
-                    self.panels['event_roll']['top_x'] = self.panels['video']['size']['width'] + 50
-                elif self.panels['video']['position'] == 'top_right':
-                    self.panels['event_roll']['top_x'] = 10
-
-            if self.panels['event_roll']['enable'] and self.panels['event_list']['enable']:
-                self.panels['event_list']['top_x'] = self.panels['event_roll']['size']['width'] + 50
-                self.panels['event_list']['size']['width'] = self.frame_width - (self.panels['event_roll']['size']['width'] + 50)
-
-        self.text_labels = {
-            'classes': None, #'Classes',
-            'classes_desc': None, #'active class indicated with black color',
-            'application_title': 'Sound Event Detection',
-            'application_desc': 'Description of the application'
-        }
-
         if self.panels['footer']['enable'] and self.logos:
             for logo_id in self.logos:
                 self.logos[logo_id] = cv2.imread(self.logos[logo_id], cv2.IMREAD_UNCHANGED)
                 if self.logos[logo_id].shape[2] == 3:
                     self.logos[logo_id] = cv2.cvtColor( self.logos[logo_id], cv2.COLOR_RGB2RGBA)
                     self.logos[logo_id][:, :, 3] = 1
-                self.logos[logo_id] = self.image_resize(
-                    image_data=self.logos[logo_id],
-                    height=self.panels['footer']['size']['height'] - 6
-                )
-                print(self.logos[logo_id].shape)
+
+                if 'header' in logo_id:
+                    self.logos[logo_id] = self.image_resize(
+                        image_data=self.logos[logo_id],
+                        height=self.panels['header']['size']['height'] - 6
+                    )
+                elif 'footer' in logo_id:
+                    self.logos[logo_id] = self.image_resize(
+                        image_data=self.logos[logo_id],
+                        height=self.panels['footer']['size']['height'] - 6
+                    )
 
         self.header_color = (100, 100, 100)
         self.label_colormap = cm.get_cmap(name=kwargs.get('event_roll_cmap', 'rainbow'))
@@ -415,7 +404,7 @@ class VideoGenerator(object):
         self.fft_size = 1024
 
         self.ui.section_header('Video generator')
-        self.ui.data('Source', self.source_video)
+        self.ui.data('Source', self.source)
         self.ui.data('Target', self.target_video)
         self.ui.sep()
         self.ui.line('Audio')
@@ -721,19 +710,25 @@ class VideoGenerator(object):
 
 
         while True:
-            video_ret, video_frame = self.video_data.read()
-            if video_ret:
-                video_frame = self.image_resize(
-                    image_data=video_frame,
-                    height=self.panels['video']['active_panel']['size']['height']-(3*2),
-                    width=self.panels['video']['active_panel']['size']['width']-(3*2),
-                )
-
             current_output_frame = numpy.zeros((self.frame_height, self.frame_width, 3), numpy.uint8)
             current_output_frame.fill(255)
+            if not self.audio_only:
+                video_ret, video_frame = self.video_data.read()
+                if self.panels['video']['enable'] and video_ret:
+                    video_frame = self.image_resize(
+                        image_data=video_frame,
+                        height=self.panels['video']['active_panel']['size']['height']-(3*2),
+                        width=self.panels['video']['active_panel']['size']['width']-(3*2),
+                    )
+            else:
+                if frame_time <  self.duration:
+                   video_ret = True
+                else:
+                   video_ret = False
 
             # Layout
             if self.panels['header']['enable']:
+                # Header
                 current_output_frame = cv2.rectangle(
                     img=current_output_frame,
                     pt1=(self.panels['header']['top_x'], self.panels['header']['top_y'] - 1),
@@ -741,16 +736,34 @@ class VideoGenerator(object):
                     color=self.panels['header']['color'],
                     thickness=-1
                 )
+                if self.panels['header']['header']:
+                    (text_width, text_height), text_baseline = cv2.getTextSize(self.panels['header']['header'], self.font, 0.8, 2)
+                    cv2.putText(
+                        img=current_output_frame,
+                        text=self.panels['header']['header'],
+                        org=(self.panels['header']['top_x'] + int(self.panels['header']['size']['width'] / 2) - int(text_width/2), self.panels['header']['top_y'] + int(self.panels['header']['size']['height'] / 2) + text_height),
+                        fontFace=self.font,
+                        fontScale=0.8,
+                        color=self.header_color,
+                        thickness=2,
+                        lineType=cv2.LINE_AA
+                    )
+                if 'header_left' in self.logos:
+                    self.place_image_transparent(
+                        target_image=current_output_frame,
+                        source_image=self.logos['header_left'],
+                        x=self.panels['header']['top_x']+4,
+                        y=self.panels['header']['top_y']+3
+                    )
 
-            #current_output_frame = cv2.rectangle(
-            #    img=current_output_frame,
-            #    pt1=(0, 0),
-            #    pt2=(self.frame_width, 474),
-            #    color=(240, 240, 240),
-            #    thickness=-1
-            #)
+                if 'header_right' in self.logos:
+                    self.place_image_transparent(
+                        target_image=current_output_frame,
+                        source_image=self.logos['header_right'],
+                        x=self.panels['header']['top_x']+self.panels['header']['size']['width']-self.logos['header_right'].shape[1]-4,
+                        y=self.panels['header']['top_y']+3
+                    )
 
-            text_margin = 10
             if self.panels['video']['enable']:
                 # Video box
                 if self.panels['video']['header']:
@@ -901,10 +914,10 @@ class VideoGenerator(object):
             if self.panels['mid_header']['enable']:
                 current_panel_text_y = self.panels['mid_header']['top_y'] + 10
                 text_margin = 10
-                if self.text_labels['application_title']:
+                if self.panels['mid_header']['header']:
                     cv2.putText(
                         img=current_output_frame,
-                        text=self.text_labels['application_title'],
+                        text=self.panels['mid_header']['header'],
                         org=(self.panels['mid_header']['top_x'], current_panel_text_y),
                         fontFace=self.font,
                         fontScale=1,
@@ -912,12 +925,14 @@ class VideoGenerator(object):
                         thickness=2,
                         lineType=cv2.LINE_AA
                     )
-                    (text_width, text_height), text_baseline = cv2.getTextSize(self.text_labels['application_title'], self.font, 1, 2)
-                    (text_width2, text_height2), text_baseline = cv2.getTextSize(self.text_labels['application_desc'], self.font, 0.5, 1)
-                    if self.text_labels['application_desc']:
+                    (text_width, text_height), text_baseline = cv2.getTextSize(self.panels['mid_header']['header'], self.font, 1, 2)
+
+                if self.panels['mid_header']['description']:
+                    (text_width2, text_height2), text_baseline = cv2.getTextSize(self.panels['mid_header']['description'], self.font, 0.5, 1)
+                    if self.panels['mid_header']['description']:
                         cv2.putText(
                             img=current_output_frame,
-                            text=self.text_labels['application_desc'],
+                            text=self.panels['mid_header']['description'],
                             org=(self.frame_width-text_width2 - text_margin, current_panel_text_y),
                             fontFace=self.font,
                             fontScale=0.5,
@@ -934,10 +949,7 @@ class VideoGenerator(object):
                 # Labels
                 column_margin = 20
                 column_width = 60
-
                 event_label_font_scale = 0.5
-
-                row_margin = 2
                 text_margin = 5
 
                 current_output_frame = cv2.rectangle(
@@ -956,31 +968,6 @@ class VideoGenerator(object):
                         color=self.panels['event_list']['frame_color'],
                         thickness=3
                     )
-
-                if self.text_labels['classes']:
-                    cv2.putText(
-                        img=current_output_frame,
-                        text=self.text_labels['classes'],
-                        org=(self.panels['event_list']['top_x']+text_margin, current_panel_text_y),
-                        fontFace=self.font,
-                        fontScale=1,
-                        color=(100, 100, 100),
-                        thickness=1,
-                        lineType=cv2.LINE_AA
-                    )
-                    (text_width, text_height), text_baseline = cv2.getTextSize(self.text_labels['classes'], self.font, 1, 1)
-                    if self.text_labels['classes_desc']:
-                        cv2.putText(
-                            img=current_output_frame,
-                            text=self.text_labels['classes_desc'],
-                            org=(self.panels['event_list']['top_x']+text_margin*2+text_width, current_panel_text_y),
-                            fontFace=self.font,
-                            fontScale=0.5,
-                            color=(180, 180, 180),
-                            thickness=1,
-                            lineType=cv2.LINE_AA
-                        )
-                    current_panel_text_y += text_baseline + 5
 
                 (text_width, text_height), text_baseline = cv2.getTextSize('text', self.font, event_set_font_scale, 2)
                 event_list_height = self.panels['event_list']['size']['height'] - 15 - text_baseline
@@ -1013,7 +1000,6 @@ class VideoGenerator(object):
                         if column_width < text_width:
                             column_width = text_width
 
-                #print(event_list_height, current_height, event_label_font_scale)
                 for col_id, event_list_label in enumerate(self._event_lists):
                     current_text_y = current_panel_text_y + 15
 
@@ -1056,18 +1042,7 @@ class VideoGenerator(object):
                     )
 
                     current_text_y += text_baseline
-                    if 0:
-                        if col_id > 0:
-                            cv2.line(
-                                img=current_output_frame,
-                                pt1=(text_margin + self.panels['event_list']['top_x'] + col_id*(column_width + column_margin) - int(column_margin/2), current_text_y ),
-                                pt2=(text_margin + self.panels['event_list']['top_x'] + col_id*(column_width + column_margin) - int(column_margin/2), self.panels['event_list']['top_y'] + self.panels['event_list']['size']['height'] ),
-                                color=(200, 200, 200),
-                                thickness=1
-                            )
-
-                    (text_width, text_height), text_baseline = cv2.getTextSize(event_list_label, self.font, event_set_font_scale
-                                                                               , 2)
+                    (text_width, text_height), text_baseline = cv2.getTextSize(event_list_label, self.font, event_set_font_scale, 2)
                     current_text_y += text_baseline + row_margin * 3
 
                     for event_label_id, event_label in enumerate(self.event_labels):
@@ -1185,7 +1160,25 @@ class VideoGenerator(object):
                         stop=frame_time + self.frame_duration
                     ).unique_event_labels
 
-                current_text_y = current_panel_text_y + int(label_lane_height / 2)+6
+                current_text_y = current_panel_text_y + int(label_lane_height / 2) + 6
+                event_roll_height = self.panels['event_roll']['size']['height'] - 15 - text_baseline
+                for scale in reversed(range(0, 100, 1)):
+                    current_height = 0
+                    current_width = 0
+                    for col_id, event_label in enumerate(self.active_events):
+                        column_max_width = 0
+                        for event_label_id, event_label in enumerate(self.event_labels):
+                            (text_width, text_height), text_baseline = cv2.getTextSize(event_label, fontFace=self.font, fontScale=scale / 10, thickness=1)
+                            if col_id == 0:
+                                current_height += text_height + int(text_height / 2)
+                            if text_width > column_max_width:
+                                column_max_width = text_width
+                        current_width += column_max_width
+
+                    if (current_height <= event_roll_height):
+                        event_label_font_scale = scale / 10.0
+                        break
+
                 for event_label in self.active_events:
                     if event_label in current_active_events:
                         cv2.putText(
@@ -1194,9 +1187,9 @@ class VideoGenerator(object):
                             org=(self.panels['event_roll']['active_panel']['x'] + int(self.panels['event_roll']['active_panel']['size']['width'] / 2),
                                  current_text_y),
                             fontFace=self.font,
-                            fontScale=0.8,
+                            fontScale=event_label_font_scale,
                             color=(50, 50, 50),
-                            thickness=2,
+                            thickness=1,
                             lineType=cv2.LINE_AA
                         )
                     else:
@@ -1206,9 +1199,9 @@ class VideoGenerator(object):
                             org=(self.panels['event_roll']['active_panel']['x'] + int(self.panels['event_roll']['active_panel']['size']['width'] / 2),
                                  current_text_y),
                             fontFace=self.font,
-                            fontScale=0.8,
+                            fontScale=event_label_font_scale,
                             color=(220, 220, 220),
-                            thickness=2,
+                            thickness=1,
                             lineType=cv2.LINE_AA
                         )
 
@@ -1263,29 +1256,21 @@ class VideoGenerator(object):
                         lineType=cv2.LINE_AA
                     )
 
-                if 'left' in self.logos:
+                if 'footer_left' in self.logos:
                     self.place_image_transparent(
                         target_image=current_output_frame,
-                        source_image=self.logos['left'],
+                        source_image=self.logos['footer_left'],
                         x=self.panels['footer']['top_x']+4,
                         y=self.panels['footer']['top_y']+3
                     )
 
-                if 'right' in self.logos:
+                if 'footer_right' in self.logos:
                     self.place_image_transparent(
                         target_image=current_output_frame,
-                        source_image=self.logos['right'],
-                        x=self.panels['footer']['top_x']+self.panels['footer']['size']['width']-self.logos['right'].shape[1]-4,
+                        source_image=self.logos['footer_right'],
+                        x=self.panels['footer']['top_x']+self.panels['footer']['size']['width']-self.logos['footer_right'].shape[1]-4,
                         y=self.panels['footer']['top_y']+3
                     )
-
-            #cv2.line(
-            #    img=current_output_frame,
-            #    pt1=(0, 300),
-            #    pt2=(1280, 300),
-            #    color=(0, 0, 0),
-            #    thickness=5
-            #)
 
             # Wait for keypress
             k = cv2.waitKey(10)
@@ -1308,8 +1293,12 @@ class VideoGenerator(object):
         cv2.destroyAllWindows()
 
         import ffmpeg
-        input_video = ffmpeg.input(self.target_video)
-        input_audio = ffmpeg.input(self.source_video)
-        ffmpeg.concat(input_video, input_audio, v=1, a=1).output(self.target_video).run(overwrite_output=True)
-
         #embed()
+        if self.audio_only:
+            input_video = ffmpeg.input(self.target_video)
+            input_audio = ffmpeg.input(self.source)
+            ffmpeg.concat(input_video, input_audio, v=1, a=1).output('data/test.mp4', crf=22).run(overwrite_output=True)
+        else:
+            input_video = ffmpeg.input(self.target_video)
+            input_audio = ffmpeg.input(self.source)
+            ffmpeg.concat(input_video, input_audio, v=1, a=1).output(self.target_video).run(overwrite_output=True)
