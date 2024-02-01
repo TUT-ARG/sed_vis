@@ -17,6 +17,7 @@ import dcase_util
 import numpy
 import math
 import time
+import textwrap
 import os
 import matplotlib
 import matplotlib.cm as cm
@@ -222,6 +223,18 @@ class VideoGenerator(object):
                 'color': (155, 155, 155),
                 'frame_color': (100,100,100)
             },
+            'event_text': {
+                'enable': False,
+                'header': None,
+                'size': {
+                    'width': 0,
+                    'height': 0,
+                },
+                'top_y': 370,
+                'top_x': 0,
+                'color': (255, 255, 255),
+                'frame_color': None
+            },
             'video_dummy': {
                 'enable': False,
                 'header': None,
@@ -243,6 +256,7 @@ class VideoGenerator(object):
             },
             'event_list': 'Events',
             'event_roll': 'Events',
+            'event_text': 'Events',
             'video_dummy': None
         })
 
@@ -267,6 +281,7 @@ class VideoGenerator(object):
                 #['mid_header'],
                 #['video_dummy', 'event_roll'],
                 ['event_list', 'event_roll'],
+                #['event_text'],
                 ['footer']
             ]
         )
@@ -289,6 +304,8 @@ class VideoGenerator(object):
         for row_id, row in enumerate(self.layout):
             if 'event_roll' in row:
                 align_tmp.append(row.index('event_roll'))
+            if 'event_text' in row:
+                align_tmp.append(row.index('event_text'))
             if 'spectrogram' in row:
                 align_tmp.append(row.index('spectrogram'))
 
@@ -300,6 +317,9 @@ class VideoGenerator(object):
                         self.panels['event_roll']['top_x'] = self.panels[col]['top_x']
                         self.panels['event_roll']['size']['width'] = self.panels[col]['size']['width']
                     elif col == 'event_roll':
+                        self.panels['spectrogram']['top_x'] = self.panels[col]['top_x']
+                        self.panels['spectrogram']['size']['width'] = self.panels[col]['size']['width']
+                    elif col == 'event_text':
                         self.panels['spectrogram']['top_x'] = self.panels[col]['top_x']
                         self.panels['spectrogram']['size']['width'] = self.panels[col]['size']['width']
 
@@ -613,7 +633,7 @@ class VideoGenerator(object):
             self.spectrogram[:, video_spectrogram_offset:, :] = video_spectrogram[:, 0:video_spectrogram_offset, :]
 
         event_list_colors = {}
-        if self.panels['event_list']['enable'] or self.panels['event_roll']['enable']:
+        if self.panels['event_list']['enable'] or self.panels['event_roll']['enable'] or self.panels['event_text']['enable']:
             line_margin = 0.1
             annotation_height = (1.0 - line_margin * 2) / len(self._event_lists)
 
@@ -1234,6 +1254,129 @@ class VideoGenerator(object):
                     )
                     current_text_x += int(self.panels['event_roll']['size']['width'] / len(self._event_lists))
 
+            if self.panels['event_text']['enable']:
+                current_panel_text_y = self.panels['event_text']['top_y']
+
+                # Labels
+                column_margin = 20
+                column_width = 200
+                line_margin = 15
+                event_label_font_scale = 0.5
+                text_margin = 5
+
+                current_output_frame = cv2.rectangle(
+                    img=current_output_frame,
+                    pt1=(self.panels['event_text']['top_x'], self.panels['event_text']['top_y']),
+                    pt2=(self.panels['event_text']['top_x'] + self.panels['event_text']['size']['width'], self.panels['event_text']['top_y'] + self.panels['event_text']['size']['height']),
+                    color=self.panels['event_text']['color'],
+                    thickness=-1
+                )
+                if self.panels['event_text']['frame_color']:
+                    current_output_frame = cv2.rectangle(
+                        img=current_output_frame,
+                        pt1=(self.panels['event_text']['top_x'], self.panels['event_text']['top_y']),
+                        pt2=(self.panels['event_text']['top_x'] + self.panels['event_text']['size']['width'],
+                             self.panels['event_text']['top_y'] + self.panels['event_text']['size']['height']),
+                        color=self.panels['event_text']['frame_color'],
+                        thickness=3
+                    )
+
+                (text_width, text_height), text_baseline = cv2.getTextSize('text', self.font, event_set_font_scale, 2)
+                event_list_height = self.panels['event_text']['size']['height'] - 15 - text_baseline
+
+                event_label_font_scale = 1.0
+
+                row_margin = int(text_height / 2)
+
+                for col_id, event_list_label in enumerate(self._event_lists):
+                    (text_width, text_height), text_baseline = cv2.getTextSize(text=event_list_label, fontFace=self.font, fontScale=event_set_font_scale, thickness=2)
+                    if column_width < text_width:
+                        column_width = text_width
+                    for event_label_id, event_label in enumerate(self.event_labels):
+                        (text_width, text_height), text_baseline = cv2.getTextSize(text=event_label, fontFace=self.font, fontScale=event_label_font_scale, thickness=1)
+                        if column_width < text_width:
+                            column_width = text_width
+
+                for col_id, event_list_label in enumerate(self._event_lists):
+                    current_text_y = current_panel_text_y + 15
+
+                    current_active_events = self._event_lists[event_list_label].filter_time_segment(
+                        start=frame_time,
+                        stop=frame_time + self.frame_duration
+                    ).unique_event_labels
+
+                    # Event group title
+                    (text_width, text_height), text_baseline = cv2.getTextSize(event_list_label, self.font, event_set_font_scale, 2)
+
+                    current_output_frame = cv2.rectangle(
+                        img=current_output_frame,
+                        pt1=(self.panels['event_text']['top_x'] + col_id*(column_width + column_margin),
+                             current_text_y-text_height-5),
+                        pt2=(text_margin*2 + self.panels['event_text']['top_x'] + col_id*(column_width + column_margin)-2,
+                             current_text_y+5),
+                        color=event_list_colors[event_list_label],
+                        thickness=-1
+                    )
+                    cv2.line(
+                        img=current_output_frame,
+                        pt1=(self.panels['event_text']['top_x'], current_text_y + int(text_baseline)+4),
+                        pt2=(self.panels['event_text']['top_x'] + self.panels['event_text']['size']['width'],
+                             current_text_y + int(text_baseline) + 4),
+                        color=(200, 200, 200),
+                        thickness=1
+                    )
+
+                    cv2.putText(
+                        img=current_output_frame,
+                        text=event_list_label,
+                        org=(text_margin*2 + self.panels['event_text']['top_x'] + col_id*(column_width + column_margin),
+                             current_text_y),
+                        fontFace=self.font,
+                        fontScale=event_set_font_scale,
+                        color=(100, 100, 100),
+                        thickness=2,
+                        lineType=cv2.LINE_AA
+                    )
+
+                    current_text_y += text_baseline
+                    (text_width, text_height), text_baseline = cv2.getTextSize(event_list_label, self.font, event_set_font_scale, 2)
+                    current_text_y += text_baseline + row_margin * 4
+
+                    active_labels = []
+                    for event_label_id, event_label in enumerate(self.event_labels):
+                        if event_label in current_active_events:
+                            active_labels.append(event_label)
+
+                    active_labels = textwrap.wrap(', '.join(active_labels), width=35)
+                    for i, line in enumerate(active_labels):
+                        textsize = cv2.getTextSize(line, self.font, event_label_font_scale, 1)[0]
+                        gap = textsize[1] + line_margin
+
+                        x = text_margin * 2 + self.panels['event_text']['top_x'] + col_id * (column_width + column_margin)
+                        y = current_text_y + i * gap
+
+                        cv2.putText(current_output_frame, line, (x, y), self.font,
+                                    event_label_font_scale,
+                                    (0, 0, 0),
+                                    1,
+                                    lineType=cv2.LINE_AA)
+
+                    #cv2.putText(
+                    #    img=current_output_frame,
+                    #    text=active_labels,
+                    #    org=(text_margin*2 + self.panels['event_list']['top_x'] + col_id * (column_width + column_margin),
+                    #         current_text_y),
+                    #    fontFace=self.font,
+                    #    fontScale=event_label_font_scale,
+                    #    color=(0, 0, 0),
+                    #    thickness=1,
+                    #    lineType=cv2.LINE_AA
+                    #)
+
+                    (text_width, text_height), text_baseline = cv2.getTextSize(event_label, self.font, event_label_font_scale, 2)
+                    current_text_y += text_height + row_margin
+
+
             if self.panels['footer']['enable']:
                 # Footer
                 current_output_frame = cv2.rectangle(
@@ -1293,11 +1436,18 @@ class VideoGenerator(object):
         cv2.destroyAllWindows()
 
         import ffmpeg
-        #embed()
+        import shutil
+
+        from pathlib import Path
+        p = Path(self.target_video)
+        target_video_tmp =  str(p.with_suffix('.tmp.mp4'))
+
         if self.audio_only:
             input_video = ffmpeg.input(self.target_video)
             input_audio = ffmpeg.input(self.source)
-            ffmpeg.concat(input_video, input_audio, v=1, a=1).output('data/test.mp4', crf=22).run(overwrite_output=True)
+            ffmpeg.concat(input_video, input_audio, v=1, a=1).output(target_video_tmp, **{'qscale:v': 3}).run(overwrite_output=True)
+            shutil.copyfile(target_video_tmp, self.target_video)
+            os.remove(target_video_tmp)
         else:
             input_video = ffmpeg.input(self.target_video)
             input_audio = ffmpeg.input(self.source)
