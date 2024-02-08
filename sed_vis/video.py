@@ -1445,10 +1445,12 @@ class VideoGenerator(object):
         if self.audio_only:
             input_video = ffmpeg.input(self.target_video)
             input_audio = ffmpeg.input(self.source)
-            ffmpeg.concat(input_video, input_audio, v=1, a=1).output(target_video_tmp, **{'qscale:v': 3}).run(overwrite_output=True)
+            ffmpeg.concat(input_video, input_audio, v=1, a=1).output(target_video_tmp, **{'qscale:v': 0}).run(overwrite_output=True)
             shutil.copyfile(target_video_tmp, self.target_video)
             os.remove(target_video_tmp)
         else:
             input_video = ffmpeg.input(self.target_video)
             input_audio = ffmpeg.input(self.source)
-            ffmpeg.concat(input_video, input_audio, v=1, a=1).output(self.target_video).run(overwrite_output=True)
+            ffmpeg.concat(input_video, input_audio, v=1, a=1).output(target_video_tmp, **{'qscale:v': 0}).run(overwrite_output=True)
+            shutil.copyfile(target_video_tmp, self.target_video)
+            os.remove(target_video_tmp)
