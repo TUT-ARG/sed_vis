@@ -100,7 +100,7 @@ class VideoGenerator(object):
 
         self.video_data = cv2.VideoCapture(filename=self.source)
 
-        self.audio_data = dcase_util.containers.AudioContainer().load(filename=self.source, mono=True, fs=16000)
+        self.audio_data = dcase_util.containers.AudioContainer().load(filename=self.source, mono=True, fs=16000).normalize()
         self.audio_info = dcase_util.utils.get_audio_info(filename=self.source)
         self.fs = self.audio_data.fs
 
