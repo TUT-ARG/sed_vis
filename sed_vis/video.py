@@ -1182,34 +1182,47 @@ class VideoGenerator(object):
 
                 current_text_y = current_panel_text_y + int(label_lane_height / 2) + 6
                 event_roll_height = self.panels['event_roll']['size']['height'] - 15 - text_baseline
+                event_roll_text_width = int(self.panels['event_roll']['active_panel']['size']['width'] / 2)
                 for scale in reversed(range(0, 100, 1)):
                     current_height = 0
                     current_width = 0
+                    column_max_width = 0
+
+                    if scale > 20:
+                        thickness = 2
+                    else:
+                        thickness = 1
+
                     for col_id, event_label in enumerate(self.active_events):
-                        column_max_width = 0
                         for event_label_id, event_label in enumerate(self.event_labels):
-                            (text_width, text_height), text_baseline = cv2.getTextSize(event_label, fontFace=self.font, fontScale=scale / 10, thickness=1)
+                            (text_width, text_height), text_baseline = cv2.getTextSize(event_label, fontFace=self.font, fontScale=scale / 10, thickness=thickness)
                             if col_id == 0:
                                 current_height += text_height + int(text_height / 2)
                             if text_width > column_max_width:
                                 column_max_width = text_width
-                        current_width += column_max_width
 
-                    if (current_height <= event_roll_height):
+                    if current_height <= event_roll_height and column_max_width <= event_roll_text_width:
                         event_label_font_scale = scale / 10.0
                         break
 
+                if event_label_font_scale > 1.0:
+                    thickness = 2
+                else:
+                    thickness = 1
+
                 for event_label in self.active_events:
+
                     if event_label in current_active_events:
+                        (text_width, text_height), text_baseline = cv2.getTextSize(event_label, fontFace=self.font, fontScale=event_label_font_scale, thickness=thickness)
                         cv2.putText(
                             img=current_output_frame,
                             text=event_label,
                             org=(self.panels['event_roll']['active_panel']['x'] + int(self.panels['event_roll']['active_panel']['size']['width'] / 2),
-                                 current_text_y),
+                                 current_text_y-2 + int(text_baseline/2)),
                             fontFace=self.font,
                             fontScale=event_label_font_scale,
                             color=(50, 50, 50),
-                            thickness=1,
+                            thickness=thickness,
                             lineType=cv2.LINE_AA
                         )
                     else:
@@ -1217,11 +1230,11 @@ class VideoGenerator(object):
                             img=current_output_frame,
                             text=event_label,
                             org=(self.panels['event_roll']['active_panel']['x'] + int(self.panels['event_roll']['active_panel']['size']['width'] / 2),
-                                 current_text_y),
+                                 current_text_y-2 + int(text_baseline/2)), #
                             fontFace=self.font,
                             fontScale=event_label_font_scale,
                             color=(220, 220, 220),
-                            thickness=1,
+                            thickness=thickness,
                             lineType=cv2.LINE_AA
                         )
 
