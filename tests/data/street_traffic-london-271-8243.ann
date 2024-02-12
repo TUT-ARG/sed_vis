@@ -1,10 +1,8 @@
-0.0000	1.0000	Shouting in the background and rain drops
-1.0000	2.0000	Cat walking
-2.0000	3.0000	Speech at the forground and footsteps
+0.0000	1.0000	People shouting
+0.0000	8.0000	People walking
+2.0000	3.0000	People talking
 3.0000	4.0000	Truck passing by
 4.0000	5.0000	Car passing by
-5.0000	6.0000	Dog barking at the background
-6.0000	7.0000	Beeping
-7.0000	8.0000	Footsteps
-8.0000	9.0000	Breaks
-9.0000	10.0000	Bus door
+5.0000	6.0000	Dog barking
+9.0000	10.0000	People walking
+8.0000	10.0000	People shouting

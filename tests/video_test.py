@@ -13,7 +13,7 @@ generator = sed_vis.video.VideoGenerator(
             os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann') # os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
         ),
         'Baseline': dcase_util.containers.MetaDataContainer().load(
-            os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys1.ann') # os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys1.ann')
+            os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann') # os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys1.ann')
         ),
         #'Proposed': dcase_util.containers.MetaDataContainer().load(
         #    os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys2.ann')
@@ -22,9 +22,10 @@ generator = sed_vis.video.VideoGenerator(
     event_list_order=['Reference', 'Baseline'], #, 'Proposed'],
 
     logos={
-        'header_left': os.path.join(current_path,'logo.png'),
+        #'header_left': os.path.join(current_path,'logo.png'),
         'footer_right': os.path.join(current_path,'logo.png')
     },
+    spectrogram_height=250,
     #headers={
     #    'header': 'Header',
     #    'video': 'Video stream',
@@ -37,12 +38,14 @@ generator = sed_vis.video.VideoGenerator(
         # ['header'],
         # ['video'],
         #['video', 'spectrogram'],
-        ['spectrogram'],
+        ['spectrogram', 'video'],
+        #['spectrogram'],
         ['mid_header'],
-        # ['video_dummy', 'event_roll'],
+        #['video_dummy', 'event_roll'],
+        ['event_roll', 'video_dummy'],
         #['event_list'], #, 'event_roll'],
         #['event_roll'],
-        ['event_text'],
-        ['footer']
+        #['event_text'],
+        #['footer']
     ]
 ).generate()
