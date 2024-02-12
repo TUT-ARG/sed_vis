@@ -22,6 +22,7 @@ import os
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.colors as colors
+from IPython import embed
 
 class VideoGenerator(object):
     """Video generator
@@ -86,9 +87,6 @@ class VideoGenerator(object):
 
         else:
             self._event_lists = None
-
-        from IPython import embed
-        #embed()
 
         self.source = kwargs.get('source', None)
         self.target_video = kwargs.get('target', None)
@@ -164,14 +162,13 @@ class VideoGenerator(object):
                 'header': None,
                 'size': {
                     'width': 762,
-                    'height': 300,
+                    'height': kwargs.get('spectrogram_height', 300),
                 },
                 'sub_panel': {
                     'right': {
                         'width': 70
                     }
                 },
-                #'right_sub_panel_width': 70,
                 'top_y': 30,
                 'top_x': None,
                 'color': (0, 0, 0),
@@ -217,7 +214,6 @@ class VideoGenerator(object):
                         'height': 20
                     }
                 },
-                #'right_sub_panel_width': 70,
                 'top_y': 370,
                 'top_x': 0,
                 'color': (155, 155, 155),
@@ -326,9 +322,10 @@ class VideoGenerator(object):
         # Get row height sum
         row_height_sum = 0
         for row_id, row in enumerate(self.layout):
-            row_heights = []
+            row_heights = [0]
             for col_id, col in enumerate(row):
-                row_heights.append(self.panels[col]['size']['height'])
+                if self.panels[col]['size']['height']:
+                    row_heights.append(self.panels[col]['size']['height'])
             row_height_sum += max(row_heights) + self.margin['layout']['row']
 
         current_y = 0
@@ -441,10 +438,44 @@ class VideoGenerator(object):
         self.ui.data('Duration [MIN:SEC]', '{min:d}:{sec:0.1f}'.format(min=int(self.duration/60), sec=self.duration%60), indent=4)
 
     def move_image(self, image_data, x, y):
+        """Move image
+
+        Parameters
+        ----------
+        image_data : NumPy array
+
+        x : int
+            x-coordinate
+
+        y : int
+            y-coordinate
+
+        Returns
+        -------
+        NumPy array
+
+        """
+
         import cv2
         return cv2.warpAffine(image_data, numpy.float32([[1, 0, x], [0, 1, y]]), (image_data.shape[1], image_data.shape[0]))
 
     def image_resize(self, image_data, width=None, height=None):
+        """Resize image
+
+        Parameters
+        ----------
+        image_data : NumPy array
+
+        width : int
+
+        height : int
+
+        Returns
+        -------
+        NumPy array
+
+        """
+
         import cv2
         # initialize the dimensions of the image to be resized and
         # grab the image size
@@ -476,10 +507,48 @@ class VideoGenerator(object):
 
     @staticmethod
     def place_image(target_image, source_image, x=0, y=0):
+        """Place image
+
+        Parameters
+        ----------
+        target_image : NumPy array
+
+        source_image : NumPy array
+
+        x : int
+
+        y : int
+
+        Returns
+        -------
+        NumPy array
+
+        """
+
         target_image[y:y + source_image.shape[0],x:x + source_image.shape[1]] = source_image
 
     @staticmethod
-    def place_image_watermark(target_image, source_image, x=0, y=0, opacity=100):
+    def _place_image_watermark(target_image, source_image, x=0, y=0, opacity=100):
+        """Place image watermark
+
+        Parameters
+        ----------
+        target_image : NumPy array
+
+        source_image : NumPy array
+
+        x : int
+
+        y : int
+
+        opacity : int
+
+        Returns
+        -------
+        NumPy array
+
+        """
+
         import cv2
         opacity = opacity / 100
         temp_image = target_image.copy()
@@ -511,7 +580,27 @@ class VideoGenerator(object):
         cv2.addWeighted(overlay, opacity, output, 1 - opacity, 0, output)
         return output
 
-    def transparentOverlay(self, src, overlay, pos=(0, 0), scale=1):
+    def _transparentOverlay(self, source_image, overlay, pos=(0, 0), scale=1):
+        """Transparent overlay
+
+        Parameters
+        ----------
+        target_image : NumPy array
+
+        source_image : NumPy array
+
+        x : int
+
+        y : int
+
+        opacity : int
+
+        Returns
+        -------
+        NumPy array
+
+        """
+
         """
         :param src: Input Color Background Image
         :param overlay: transparent Image (BGRA)
@@ -522,7 +611,7 @@ class VideoGenerator(object):
         import cv2
         #overlay = cv2.resize(overlay, (0, 0), fx=scale, fy=scale)
         h, w, _ = overlay.shape  # Size of foreground
-        rows, cols, _ = src.shape  # Size of background Image
+        rows, cols, _ = source_image.shape  # Size of background Image
         y, x = pos[0], pos[1]  # Position of foreground/overlay image
         # loop over all pixels and apply the blending equation
         for i in range(h):
@@ -530,10 +619,10 @@ class VideoGenerator(object):
                 if x + i >= rows or y + j >= cols:
                     continue
                 alpha = float(overlay[i][j][3] / 255.0)  # read the alpha channel
-                src[x + i][y + j] = alpha * overlay[i][j][:3] + (1 - alpha) * src[x + i][y + j]
-        return src
+                source_image[x + i][y + j] = alpha * overlay[i][j][:3] + (1 - alpha) * src[x + i][y + j]
+        return source_image
 
-    def addImageWatermark(self, logo, frame, opacity=100, pos=(0, 0)):
+    def _addImageWatermark(self, logo, frame, opacity=100, pos=(0, 0)):
         import cv2
         opacity = opacity / 100
         tempImg = frame.copy()
@@ -546,8 +635,28 @@ class VideoGenerator(object):
 
     @staticmethod
     def place_image_transparent(target_image, source_image, x=None, y=None):
-        # Function based on https://stackoverflow.com/a/71701023
-        import numpy
+        """Place image transparent
+
+        Function based on https://stackoverflow.com/a/71701023
+
+        Parameters
+        ----------
+        target_image : NumPy array
+
+        source_image : NumPy array
+
+        x : int
+            x-coordinate
+
+        y : int
+            y-coordinate
+
+        Returns
+        -------
+        NumPy array
+
+        """
+
         target_h, target_w, target_channels = target_image.shape
         source_h, source_w, source_channels = source_image.shape
 
@@ -585,11 +694,12 @@ class VideoGenerator(object):
         target_image[target_y:target_y + h, target_x:target_x + w] = composite
 
     def generate(self):
+        """Generate video
+        """
+
         import cv2
         import librosa
-        from IPython import embed
 
-        #embed()
         frame_index = 0
         frame_time = 0
 
