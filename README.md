@@ -5,12 +5,16 @@
 
 ``sed_vis`` is an open-source Python toolbox for visualizing the annotations and system outputs of sound event detection systems.
 
-There is an *event roll*-type of visualizer to show annotation and/or system output along with the audio signal. The audio signal can be played and an indicator bar can be used to follow the sound events. 
+There is an *event roll*-type of visualizer to show annotation and/or system output along with the audio signal. The audio signal can be played, and an indicator bar can be used to follow the sound events. 
 
 The visualization tool can be used in any of the following ways:
 
-* By using the included visualizer script directly. This is suitable for users who do not normally use Python.
+* By using the included visualizer script directly. This is suitable for users who do not usually use Python.
 * By importing it and calling it from your own Python code
+
+![screen capture](screen_capture_video.png)
+
+In addition to the interactive visualizer, there is also a video generator to make sound event detection, audio tagging, and audio captioning demonstration videos. 
 
 Installation instructions
 =========================
@@ -57,6 +61,9 @@ The toolbox is tested with Python 3.9.
 * matplotlib >= 1.4.0
 * pyaudio >= 0.2.7
 * dcase_util >= 0.1.5
+
+For video generation:
+* opencv-python >= 4.7.0
 
 *Mac*
 
@@ -144,6 +151,47 @@ vis = sed_vis.visualization.EventListVisualizer(event_lists=event_lists,
                                                 sampling_rate=audio_container.fs)
 vis.show()
 ```
+
+Quickstart: Using the visualizer to generate videos
+===================================================
+
+![screen capture](screen_capture_video.png)
+
+After ``sed_vis`` is installed, it can be imported and used to generate videos as follows:
+
+```python
+import sed_vis
+import dcase_util
+import os
+
+current_path = os.path.dirname(os.path.realpath(__file__))
+
+generator = sed_vis.video.VideoGenerator(
+    source_video=os.path.join('data', 'street_traffic-london-271-8243.mp4'),
+    source_audio=os.path.join('data', 'street_traffic-london-271-8243.mp4'),
+    target=os.path.join('data', 'street_traffic-london-271-8243.output.mp4'),
+    event_lists={
+        'Reference': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
+        ),
+        'Baseline': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
+        ),
+        'Proposed': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys2.ann')
+        )
+    },
+    event_list_order=['Reference', 'Baseline', 'Proposed'],
+    layout=[
+        ['spectrogram', 'video'],
+        ['mid_header'],
+        ['event_roll', 'video_dummy'],
+    ]
+).generate()
+
+```
+
+
 
 License
 =======
