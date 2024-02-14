@@ -5,3 +5,4 @@ pyaudio>=0.2.11
 soundfile>=0.12.0
 dcase_util>=0.2.20
 colorama>=0.4.6
+opencv-python>=4.7.0
