@@ -3,14 +3,18 @@
 
 ![screen capture](screen_capture.png)
 
-``sed_vis`` is an open source Python toolbox for visualizing the annotations and system outputs of sound event detection systems.
+``sed_vis`` is an open-source Python toolbox for visualizing the annotations and system outputs of sound event detection systems.
 
-There is an *event roll*-type of visualizer to show annotation and/or system output along with the audio signal. The audio signal can be played and indicator bar can be used to follow the sound events. 
+There is an *event roll*-type of visualizer to show annotation and/or system output along with the audio signal. The audio signal can be played, and an indicator bar can be used to follow the sound events. 
 
 The visualization tool can be used in any of the following ways:
 
-* By using the included visualizer script directly. This is suitable users who do not normally use Python.
+* By using the included visualizer script directly. This is suitable for users who do not usually use Python.
 * By importing it and calling it from your own Python code
+
+![screen capture](screen_capture_video.png)
+
+In addition to the interactive visualizer, there is also a video generator to make sound event detection, audio tagging, and audio captioning demonstration videos. 
 
 Installation instructions
 =========================
@@ -50,13 +54,16 @@ Toolbox can be uninstalled:
 Requirements
 ------------
 
-The toolbox is tested with Python 2.7.10. 
+The toolbox is tested with Python 3.9. 
 
 * numpy >= 1.7.0
 * scipy >= 0.9.0
 * matplotlib >= 1.4.0
 * pyaudio >= 0.2.7
 * dcase_util >= 0.1.5
+
+For video generation:
+* opencv-python >= 4.7.0
 
 *Mac*
 
@@ -65,7 +72,7 @@ In order to toolbox work with Mac, matplotlib need to use TkAgg backend. The too
 Quickstart: Using the visualizer
 ================================
 
-The easiest way to visualize sound events with ``sed_vis`` is to use provided visualizer script.
+The easiest way to visualize sound events with ``sed_vis`` is to use the provided visualizer script.
 
 Visualizers are Python scripts which can be run from the command prompt and utilize ``sed_vis`` to visualize reference and estimated annotations you provide. 
 To use the visualizers, you must first install ``sed_vis`` and its dependencies.
@@ -73,7 +80,7 @@ The visualizers scripts can be found in the ``sed_vis`` repository in the ``visu
 
 https://github.com/TUT-ARG/sed_vis/tree/master/visualizers
 
-Currently there is one visualizer available, which is visualizing events as *event roll*.
+Currently, there is one visualizer available, which is visualizing events as an *event roll*.
 
 To get usage help:
 
@@ -83,11 +90,11 @@ To visualize reference and estimated annotations along with audio:
 
 ``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann ../tests/data/a001_system_output.ann -n reference system``
 
-Where argument ``-l ../tests/data/a001.ann ../tests/data/a001_system_output.ann`` gives list of event lists to be visualized and argument ``-n reference system`` gives name identifiers for them.
+Where argument ``-l ../tests/data/a001.ann ../tests/data/a001_system_output.ann`` gives a list of event lists to be visualized and argument ``-n reference system`` gives name identifiers for them.
 
-This will show window with three panels: 
+This will show a window with three panels: 
 
-1. Selector panel, use this to zoom in, zoom out by clicking 
+1. Selector panel, use this to zoom in and zoom out by clicking 
 2. Spectrogram or time domain panel
 3. Event roll, event instances can be played back by clicking them
 
@@ -103,18 +110,18 @@ To visualize only reference annotation along with audio using only time domain r
 
 ``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference --time_domain``
 
-To visualize only reference annotation along with audio, and merging events having only small gap between them (<100ms):
+To visualize only reference annotation along with audio, and merging events having only a small gap between them (<100ms):
 
 ``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference --minimum_event_gap=0.1``
 
-To prepare visuals for publication. This will remove all audio playback buttons and tighten the layout. Also font size is increased. Use figure save button to save figure in svg format. One can use Inkscape to edit figure further and save into eps-format.
+To prepare visuals for publication. This will remove all audio playback buttons and tighten the layout. Also, font size is increased. Use the figure save button to save the figure in svg format. One can use Inkscape to edit figures further and save them in eps-format.
 
 ``./sed_visualizer.py -a ../tests/data/a001.wav -l ../tests/data/a001.ann -n reference --publication``
 
 Quickstart: Using ``sed_vis`` in Python code
 =============================================
 
-After ``sed_vis`` is installed, it can be imported and used to your Python code as follows:
+After ``sed_vis`` is installed, it can be imported and used in your Python code as follows:
 
 ```python
 import sed_vis
@@ -144,6 +151,47 @@ vis = sed_vis.visualization.EventListVisualizer(event_lists=event_lists,
                                                 sampling_rate=audio_container.fs)
 vis.show()
 ```
+
+Quickstart: Using the visualizer to generate videos
+===================================================
+
+![screen capture](screen_capture_video.png)
+
+After ``sed_vis`` is installed, it can be imported and used to generate videos as follows:
+
+```python
+import sed_vis
+import dcase_util
+import os
+
+current_path = os.path.dirname(os.path.realpath(__file__))
+
+generator = sed_vis.video.VideoGenerator(
+    source_video=os.path.join('data', 'street_traffic-london-271-8243.mp4'),
+    source_audio=os.path.join('data', 'street_traffic-london-271-8243.mp4'),
+    target=os.path.join('data', 'street_traffic-london-271-8243.output.mp4'),
+    event_lists={
+        'Reference': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
+        ),
+        'Baseline': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
+        ),
+        'Proposed': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys2.ann')
+        )
+    },
+    event_list_order=['Reference', 'Baseline', 'Proposed'],
+    layout=[
+        ['spectrogram', 'video'],
+        ['mid_header'],
+        ['event_roll', 'video_dummy'],
+    ]
+).generate()
+
+```
+
+
 
 License
 =======

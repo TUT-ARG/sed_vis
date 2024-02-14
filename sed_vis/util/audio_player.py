@@ -33,7 +33,7 @@ class AudioPlayer(object):
         self.play_start_time = 0
 
         import pyaudio
-        self._pa = pa = pyaudio.PyAudio()
+        self._pa = pyaudio.PyAudio()
         self._threads = []
 
         # Lockers
@@ -107,11 +107,13 @@ class AudioPlayer(object):
             if self.finished:
                 raise threading.ThreadError("Trying to play an audio stream while "
                                             "halting the AudioIO manager object")
-            self.player_thread = AudioThread(device_manager=self,
-                                             audio=self.get_segment(offset, duration),
-                                             chunk_size=2048,
-                                             sampling_rate=self.sampling_rate,
-                                             nchannels=self.channels)
+            self.player_thread = AudioThread(
+                device_manager=self,
+                audio=self.get_segment(offset, duration),
+                chunk_size=2048,
+                sampling_rate=self.sampling_rate,
+                nchannels=self.channels
+            )
 
             self.player_thread.start()
             self.playing = True
@@ -159,7 +161,7 @@ class AudioThread(threading.Thread):
     """
 
     def __init__(self, device_manager, audio,
-                 chunk_size,
+                 chunk_size=2048,
                  channels=1,
                  sampling_rate=44100,
                  **kwargs
@@ -203,8 +205,11 @@ class AudioThread(threading.Thread):
 
         # Vertical stride is one sample
         # Horizontal stride is `hop_length` samples
-        self.chunks = as_strided(self.audio, shape=(self.chunk_size, n_frames),
-                                 strides=(self.audio.itemsize, self.chunk_size * self.audio.itemsize))
+        self.chunks = as_strided(
+            self.audio,
+            shape=(self.chunk_size, n_frames),
+            strides=(self.audio.itemsize, self.chunk_size * self.audio.itemsize)
+        )
 
         # Lockers
         self.lock = threading.Lock()  # Avoid control methods simultaneous call
@@ -217,12 +222,15 @@ class AudioThread(threading.Thread):
         self.write_stream = _portaudio.write_stream
 
         # Open a new audio output stream
-        self.stream = device_manager._pa.open(format=1,
-                                              channels=self.nchannels,
-                                              rate=sampling_rate,
-                                              frames_per_buffer=self.chunk_size,
-                                              output=True,
-                                              **kwargs)
+        self.stream = device_manager._pa.open(
+            format=1,
+            channels=self.nchannels,
+            rate=sampling_rate,
+            frames_per_buffer=self.chunk_size,
+            output=True,
+            **kwargs
+        )
+
         self.time = 0
 
     def run(self):

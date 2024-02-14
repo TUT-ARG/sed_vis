@@ -623,12 +623,13 @@ class EventListVisualizer(object):
             self.slider_time = SpanSelector(
                 ax=self.ax1,
                 onselect=self.on_select,
-                minspan=None,
+                minspan=0,
                 direction='horizontal',
-                span_stays=True,
+                interactive=True,
                 useblit=self.use_blit,
                 onmove_callback=None,
-                rectprops=dict(alpha=0.15, facecolor=self.color)
+                drag_from_anywhere=True,
+                props=dict(alpha=0.15, facecolor=self.color)
             )
 
         if not self.publication_mode:
@@ -791,7 +792,7 @@ class EventListVisualizer(object):
             elif self.mode == 'time_domain':
                 self.ax2.set_xlim(self.timedomain_locations[0], self.timedomain_locations[-1])
 
-            self.slider_time.stay_rect.set_visible(False)
+            self.slider_time._selection_artist.set_visible(False)
 
         else:
             # Set annotation panel
@@ -813,7 +814,7 @@ class EventListVisualizer(object):
                 this_x = self.timedomain_locations[index_min:index_max]
                 self.ax2.set_xlim(this_x[0], this_x[-1])
 
-            self.slider_time.stay_rect.set_visible(True)
+            self.slider_time._selection_artist.set_visible(True)
 
         self.fig.canvas.draw()
 
@@ -873,7 +874,8 @@ class EventListVisualizer(object):
             init_func=self.event_roll_panel_play_indicator_init,
             interval=50,
             blit=self.use_blit,
-            repeat=False
+            repeat=False,
+            cache_frame_data=False
         )
 
         self.animation_selector_panel = animation.FuncAnimation(
@@ -882,7 +884,8 @@ class EventListVisualizer(object):
             init_func=self.selector_panel_play_indicator_init,
             interval=50,
             blit=self.use_blit,
-            repeat=False
+            repeat=False,
+            cache_frame_data=False
         )
 
         self.animation_highlight_panel = animation.FuncAnimation(
@@ -891,7 +894,8 @@ class EventListVisualizer(object):
             init_func=self.highlight_panel_play_indicator_init,
             interval=50,
             blit=self.use_blit,
-            repeat=False
+            repeat=False,
+            cache_frame_data=False
         )
 
         self.fig.canvas.draw()
