@@ -6,34 +6,39 @@ import os
 current_path = os.path.dirname(os.path.realpath(__file__))
 
 generator = sed_vis.video.VideoGenerator(
-    source=os.path.join('data', 'street_traffic-london-271-8243.mp4'), # os.path.join('data', 'street_traffic-london-271-8243.mp4') #
-    target=os.path.join('data', 'street_traffic-london-271-8243.output.mp4'), # os.path.join('data', 'street_traffic-london-271-8243.output.mp4')
+    source_video=os.path.join('data', 'street_traffic-london-271-8243.mp4'),
+    source_audio=os.path.join('data', 'street_traffic-london-271-8243.mp4'),
+    target=os.path.join('data', 'street_traffic-london-271-8243.output.mp4'),
     event_lists={
         'Reference': dcase_util.containers.MetaDataContainer().load(
-            os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann') # os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
+            os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
         ),
         'Baseline': dcase_util.containers.MetaDataContainer().load(
-            os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann') # os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys1.ann')
+            os.path.join(current_path, 'data', 'street_traffic-london-271-8243.ann')
         ),
-        #'Proposed': dcase_util.containers.MetaDataContainer().load(
-        #    os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys2.ann')
-        #)
+        'Proposed': dcase_util.containers.MetaDataContainer().load(
+            os.path.join(current_path, 'data', 'street_traffic-london-271-8243_sys2.ann')
+        )
     },
-    event_list_order=['Reference', 'Baseline'], #, 'Proposed'],
-
+    event_list_order=['Reference', 'Baseline', 'Proposed'],
     logos={
-        #'header_left': os.path.join(current_path,'logo.png'),
         'footer_right': os.path.join(current_path,'logo.png')
     },
     spectrogram_height=250,
-    #headers={
-    #    'header': 'Header',
-    #    'video': 'Video stream',
-    #    'spectrogram': 'Spectrogram',
-    #    'event_list': 'Events',
-    #    'event_roll': 'Events',
-    #    'footer': 'Footer'
-    #},
+    text={
+        'header': None,
+        'footer': None,
+        'video': 'Video stream',
+        'spectrogram': 'Spectrogram',
+        'mid_header': {
+            'header': 'Sound Event Detection',
+            'description': 'Description of the application'
+        },
+        'event_list': 'Events',
+        'event_roll': 'Events',
+        'event_text': 'Events',
+        'video_dummy': None
+    },
     layout=[
         # ['header'],
         # ['video'],
