@@ -22,7 +22,6 @@ import os
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.colors as colors
-from IPython import embed
 
 class VideoGenerator(object):
     """Video generator
@@ -47,6 +46,64 @@ class VideoGenerator(object):
         active_events : list
             List of active sound event classes, if None all used.
             (Default value=None)
+
+        minimum_event_length : float
+
+        minimum_event_gap : float
+
+        source_video : str
+            Filename of input video file
+
+        source_audio : str
+            Filename of input video file
+
+        source : str
+            Filename of video file with audio
+
+        target : str
+            Filename of generate video output
+
+        frame_width : int
+            Output video frame width
+            Default value 1280
+
+        frame_height : int
+            Output video frame height
+            Default value 720
+
+        logos : dict
+
+        footer_height : int
+            Footer panel height
+            Default value 50
+
+        header_height : int
+            Header panel height
+            Default value 50
+
+        spectrogram_height : int
+            Spectrogram panel height
+            Default value 300
+
+        text : dict
+
+        layout : list of lists
+            Defining what panels are shown, format [[panels for row1],[panels for row2]].
+            Valid panel names: 'header', 'video', 'spectrogram', 'mid_header', 'video_dummy', 'event_roll', 'event_list', event_text', 'footer'
+
+        margin : dict
+            Margins used in the visualization
+
+        event_roll_cmap : str
+            Color map name for event roll
+            Default value 'rainbow'
+
+        spectrogram_cmap : str
+            Color map name for spectrogram
+            Default value 'magma'
+
+         spectrogram_ref : float
+
 
         Returns
         -------
@@ -88,18 +145,29 @@ class VideoGenerator(object):
         else:
             self._event_lists = None
 
-        self.source = kwargs.get('source', None)
+        self.source = {}
+        if kwargs.get('source_video', None):
+            self.source['video'] = kwargs.get('source_video', None)
+        if kwargs.get('source_audio', None):
+            self.source['audio'] = kwargs.get('source_audio', None)
+
+        if kwargs.get('source', None):
+            if 'video' not in self.source:
+                self.source['video'] = kwargs.get('source', None)
+            if 'audio' not in self.source:
+                self.source['audio'] = kwargs.get('source', None)
+
         self.target_video = kwargs.get('target', None)
 
-        self.target_video_final = kwargs.get('target_video', None)
+        self.video_data = cv2.VideoCapture(filename=self.source['video'])
 
-        self.title = kwargs.get('title', None)
-        self.intro_text = kwargs.get('intro_text', None)
+        self.audio_data = dcase_util.containers.AudioContainer().load(
+            filename=self.source['audio'],
+            mono=True,
+            fs=16000
+        ).normalize()
 
-        self.video_data = cv2.VideoCapture(filename=self.source)
-
-        self.audio_data = dcase_util.containers.AudioContainer().load(filename=self.source, mono=True, fs=16000).normalize()
-        self.audio_info = dcase_util.utils.get_audio_info(filename=self.source)
+        self.audio_info = dcase_util.utils.get_audio_info(filename=self.source['audio'])
         self.fs = self.audio_data.fs
 
         self.frame_width = kwargs.get('frame_width', 1280)
@@ -111,6 +179,7 @@ class VideoGenerator(object):
             self.frame_count = int(self.video_data.get(cv2.CAP_PROP_FRAME_COUNT))
             self.duration = self.frame_count / self.fps
             self.audio_only = False
+
         else:
             self.fps = 29.97
             self.frame_duration = 1.0 / self.fps
@@ -127,7 +196,7 @@ class VideoGenerator(object):
                 'enable': False,
                 'header': None,
                 'size': {
-                    'height': 50,
+                    'height': kwargs.get('header_height', 50),
                     'width': self.frame_width,
                 },
                 'top_y': 0,
@@ -138,7 +207,7 @@ class VideoGenerator(object):
                 'enable': False,
                 'header': None,
                 'size': {
-                    'height': 50,
+                    'height': kwargs.get('footer_height', 50),
                     'width': self.frame_width,
                 },
                 'top_y': self.frame_height-50,
@@ -278,20 +347,21 @@ class VideoGenerator(object):
                 #['video_dummy', 'event_roll'],
                 ['event_list', 'event_roll'],
                 #['event_text'],
-                ['footer']
+                #['footer']
             ]
         )
 
-        self.margin = {
-            'window':{
-                'left': 8,
-                'right': 8,
-            },
-            'layout': {
-                'column': 20,
-                'row': 20
+        self.margin = kwargs.get('margin', {
+                'window':{
+                    'left': 8,
+                    'right': 8,
+                },
+                'layout': {
+                    'column': 20,
+                    'row': 20
+                }
             }
-        }
+        )
 
         self.ui.row('row', 'col', 'panel', 'x', 'y', 'height', 'width',  indent=4)
         self.ui.row_sep()
@@ -415,13 +485,16 @@ class VideoGenerator(object):
 
         self.spectrogram_move = 10
         self.spectrogram_segment_duration = (self.panels['spectrogram']['size']['width']-6) / self.spectrogram_move * self.frame_duration
-        self.cmap = matplotlib.cm.get_cmap('magma')
+        self.cmap = matplotlib.cm.get_cmap(kwargs.get('spectrogram_cmap', 'magma'))
         self.norm = matplotlib.colors.Normalize(vmin=-20, vmax=20)
+        self.spectrogram_ref = kwargs.get('spectrogram_ref', 1.0)
+        self.fft_size = 2048
 
-        self.fft_size = 1024
+        self.event_roll = None
 
         self.ui.section_header('Video generator')
-        self.ui.data('Source', self.source)
+        self.ui.data('Source audio', self.source['audio'])
+        self.ui.data('Source video', self.source['video'])
         self.ui.data('Target', self.target_video)
         self.ui.sep()
         self.ui.line('Audio')
@@ -719,11 +792,12 @@ class VideoGenerator(object):
             S = numpy.abs(librosa.stft(
                 y=self.audio_data.data,
                 n_fft=self.fft_size,
-                win_length=882,  # int(self.fft_size/4),
-                hop_length=int(self.frame_duration*self.audio_data.fs),  # 441, # int(self.fft_size/4))
+                win_length=int(self.frame_duration*self.audio_data.fs*2),
+                hop_length=int(self.frame_duration*self.audio_data.fs),
                 center=True
             ))
-            S_mag = librosa.amplitude_to_db(S, ref=1.0)
+
+            S_mag = librosa.amplitude_to_db(S, ref=self.spectrogram_ref)
             video_spectrogram = numpy.zeros((S_mag.shape[0], S_mag.shape[1], 3), numpy.uint8)
 
             for i in range(0, S_mag.shape[0]):
@@ -783,10 +857,6 @@ class VideoGenerator(object):
 
             self.event_roll.fill(0)
 
-
-            #(self.frame_count * self.event_roll_move) / self.audio_data.duration_sec
-            #embed()
-            time_axis_multiplier = 1000
             video_event_roll = numpy.zeros((self.panels['event_roll']['active_panel']['size']['height']-6, (self.frame_count * self.event_roll_move), 3), numpy.uint8)
             video_event_roll.fill(255)
 
@@ -812,8 +882,6 @@ class VideoGenerator(object):
 
             for label in self.active_events:
                 for event_list_id, event_list_label in enumerate(self._event_list_order):
-                    offset = (len(self._event_list_order)-1-event_list_id) * annotation_height
-
                     event_y1 = y + (event_list_id * (sublane_height+sublane_margin))
                     event_y2 = y + (event_list_id * (sublane_height+sublane_margin)) + sublane_height
 
@@ -829,15 +897,8 @@ class VideoGenerator(object):
 
                 y += label_lane_height
 
-            #video_event_roll = cv2.resize(
-            #    src=video_event_roll,
-            #    dsize=(self.frame_count*self.event_roll_move, self.panels['event_roll']['size']['height'] - 6),
-            #    interpolation=cv2.INTER_NEAREST #INTER_AREA
-            #)
-
             video_event_roll_offset = int(self.event_roll.shape[1] / 2)
             self.event_roll[:, video_event_roll_offset:, :] = video_event_roll[:, 0:video_event_roll_offset, :]
-
 
         while True:
             current_output_frame = numpy.zeros((self.frame_height, self.frame_width, 3), numpy.uint8)
@@ -1008,17 +1069,6 @@ class VideoGenerator(object):
                         lineType=cv2.LINE_AA
                     )
                     freq_index += 1
-                if 0:
-                    cv2.putText(
-                        img=current_output_frame,
-                        text='Frequency',
-                        org=(self.panels['spectrogram']['active_panel']['x'] + self.spectrogram.shape[1] + 55, self.panels['spectrogram']['active_panel']['y'] + 4 + int(self.spectrogram.shape[0] / 2)),
-                        fontFace=self.font,
-                        fontScale=0.5,
-                        color=(100, 100, 100),
-                        thickness=1,
-                        lineType=cv2.LINE_AA
-                    )
 
                 shade = numpy.zeros_like(current_output_frame, numpy.uint8)
 
@@ -1353,7 +1403,7 @@ class VideoGenerator(object):
 
                 current_text_x = self.panels['event_roll']['top_x']
                 current_text_y += 10
-                for col_id, event_list_label in enumerate(self._event_lists):
+                for col_id, event_list_label in enumerate(self._event_list_order):
                     # Event group title
                     (text_width, text_height), text_baseline = cv2.getTextSize(event_list_label, self.font, event_set_font_scale, 2)
 
@@ -1567,13 +1617,13 @@ class VideoGenerator(object):
 
         if self.audio_only:
             input_video = ffmpeg.input(self.target_video)
-            input_audio = ffmpeg.input(self.source)
+            input_audio = ffmpeg.input(self.source['audio'])
             ffmpeg.concat(input_video, input_audio, v=1, a=1).output(target_video_tmp, **{'qscale:v': 0}).run(overwrite_output=True)
             shutil.copyfile(target_video_tmp, self.target_video)
             os.remove(target_video_tmp)
         else:
             input_video = ffmpeg.input(self.target_video)
-            input_audio = ffmpeg.input(self.source)
+            input_audio = ffmpeg.input(self.source['audio'])
             ffmpeg.concat(input_video, input_audio, v=1, a=1).output(target_video_tmp, **{'qscale:v': 0}).run(overwrite_output=True)
             shutil.copyfile(target_video_tmp, self.target_video)
             os.remove(target_video_tmp)
