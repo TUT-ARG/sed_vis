@@ -870,10 +870,7 @@ class VideoGenerator(object):
                         thickness=1
                     )
 
-            line_margin = 0.1
             y = 0
-            event_list_count = len(self._event_lists)
-            annotation_height = (1.0-line_margin*2)/event_list_count
 
             label_lane_height = int((video_event_roll.shape[0]) / self.event_label_count)
 
@@ -1371,7 +1368,6 @@ class VideoGenerator(object):
                     thickness = 1
 
                 for event_label in self.active_events:
-
                     if event_label in current_active_events:
                         (text_width, text_height), text_baseline = cv2.getTextSize(event_label, fontFace=self.font, fontScale=event_label_font_scale, thickness=thickness)
                         cv2.putText(
@@ -1402,15 +1398,16 @@ class VideoGenerator(object):
                     current_text_y += label_lane_height
 
                 current_text_x = self.panels['event_roll']['top_x']
-                current_text_y += 10
+                current_text_y = self.panels['event_roll']['active_panel']['y'] + self.panels['event_roll']['active_panel']['size']['height'] + 5
+
                 for col_id, event_list_label in enumerate(self._event_list_order):
                     # Event group title
                     (text_width, text_height), text_baseline = cv2.getTextSize(event_list_label, self.font, event_set_font_scale, 2)
 
                     current_output_frame = cv2.rectangle(
                         img=current_output_frame,
-                        pt1=(current_text_x , current_text_y-text_height),
-                        pt2=(current_text_x +10, current_text_y),
+                        pt1=(current_text_x , current_text_y),
+                        pt2=(current_text_x +10, current_text_y + text_height),
                         color=event_list_colors[event_list_label],
                         thickness=-1
                     )
@@ -1418,7 +1415,7 @@ class VideoGenerator(object):
                     cv2.putText(
                         img=current_output_frame,
                         text=event_list_label,
-                        org=(current_text_x + 20, current_text_y),
+                        org=(current_text_x + 20, current_text_y + text_height),
                         fontFace=self.font,
                         fontScale=event_set_font_scale,
                         color=(100, 100, 100),
